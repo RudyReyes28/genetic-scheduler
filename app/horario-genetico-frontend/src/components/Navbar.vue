@@ -1,34 +1,54 @@
 <template>
   <nav class="navbar">
-    <RouterLink to="/">Inicio</RouterLink>
-    <RouterLink to="/cursos">Cursos</RouterLink>
-    <RouterLink to="/docentes">Docentes</RouterLink>
-    <RouterLink to="/salones">Salones</RouterLink>
-    <RouterLink to="/generacion">Generación</RouterLink>
-    <RouterLink to="/reportes">Reportes</RouterLink>
-    <RouterLink to="/acerca-de">Acerca de</RouterLink>
+    <div class="logo">
+      Scheduler IA
+    </div>
+
+    <div class="links">
+      <RouterLink to="/">Inicio</RouterLink>
+      <RouterLink to="/cursos">Cursos</RouterLink>
+      <RouterLink to="/docentes">Docentes</RouterLink>
+      <RouterLink to="/salones">Salones</RouterLink>
+      <RouterLink to="/generacion">Generación</RouterLink>
+      <RouterLink to="/reportes">Reportes</RouterLink>
+      <RouterLink to="/acerca-de">Acerca de</RouterLink>
+    </div>
   </nav>
 </template>
 
-<script setup>
-</script>
-
 <style scoped>
-.navbar {
-  display: flex;
-  gap: 12px;
-  padding: 16px;
-  background: #f2f2f2;
-  flex-wrap: wrap;
+
+.navbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:#1f2937;
+  padding:15px 40px;
 }
 
-a {
-  text-decoration: none;
-  color: #333;
-  font-weight: 600;
+.logo{
+  color:white;
+  font-weight:bold;
+  font-size:18px;
 }
 
-.router-link-active {
-  color: #42b883;
+.links{
+  display:flex;
+  gap:20px;
 }
+
+a{
+  color:#cbd5e1;
+  text-decoration:none;
+  font-weight:500;
+}
+
+a:hover{
+  color:white;
+}
+
+.router-link-active{
+  color:#4ade80;
+}
+
 </style>
