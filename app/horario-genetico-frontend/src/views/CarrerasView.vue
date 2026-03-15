@@ -2,14 +2,14 @@
   <div class="page">
     <div class="header-row">
       <div>
-        <h1 class="page-title">Docentes</h1>
+        <h1 class="page-title">Carreras</h1>
         <p class="page-subtitle">
-          Administración de docentes disponibles para impartir cursos
+          Administración de carreras académicas
         </p>
       </div>
 
       <button class="btn" @click="openCreate">
-        Agregar Docente
+        Agregar Carrera
       </button>
     </div>
 
@@ -26,38 +26,28 @@
         <thead>
           <tr>
             <th>ID</th>
-            <th>Registro</th>
+            <th>Código</th>
             <th>Nombre</th>
-            <th>Hora Entrada</th>
-            <th>Hora Salida</th>
-            <th>Activo</th>
             <th>Acciones</th>
           </tr>
         </thead>
 
         <tbody>
           <tr v-if="loading">
-            <td colspan="7" class="empty">Cargando docentes...</td>
+            <td colspan="4" class="empty">Cargando carreras...</td>
           </tr>
 
-          <tr v-else-if="docentes.length === 0">
-            <td colspan="7" class="empty">No hay docentes registrados.</td>
+          <tr v-else-if="carreras.length === 0">
+            <td colspan="4" class="empty">No hay carreras registradas.</td>
           </tr>
 
-          <tr v-for="docente in docentes" :key="docente.id">
-            <td>{{ docente.id }}</td>
-            <td>{{ docente.registro_personal }}</td>
-            <td>{{ docente.nombre }}</td>
-            <td>{{ formatTime(docente.hora_entrada) }}</td>
-            <td>{{ formatTime(docente.hora_salida) }}</td>
-            <td>
-              <span :class="docente.activo ? 'badge active' : 'badge inactive'">
-                {{ docente.activo ? 'Sí' : 'No' }}
-              </span>
-            </td>
+          <tr v-for="carrera in carreras" :key="carrera.id">
+            <td>{{ carrera.id }}</td>
+            <td>{{ carrera.codigo }}</td>
+            <td>{{ carrera.nombre }}</td>
             <td class="actions">
-              <button class="btn-small edit" @click="openEdit(docente)">Editar</button>
-              <button class="btn-small delete" @click="removeDocente(docente.id)">Eliminar</button>
+              <button class="btn-small edit" @click="openEdit(carrera)">Editar</button>
+              <button class="btn-small delete" @click="removeCarrera(carrera.id)">Eliminar</button>
             </td>
           </tr>
         </tbody>
@@ -66,34 +56,17 @@
 
     <div v-if="showForm" class="modal-backdrop">
       <div class="modal">
-        <h2>{{ isEditing ? 'Editar Docente' : 'Nuevo Docente' }}</h2>
+        <h2>{{ isEditing ? 'Editar Carrera' : 'Nueva Carrera' }}</h2>
 
-        <form @submit.prevent="submitForm" class="form-grid">
+        <form @submit.prevent="submitForm" class="form-grid single-column">
           <div class="form-group">
             <label>Nombre</label>
             <input v-model="form.nombre" type="text" required />
           </div>
 
           <div class="form-group">
-            <label>Registro personal</label>
-            <input v-model="form.registro_personal" type="text" required />
-          </div>
-
-          <div class="form-group">
-            <label>Hora entrada</label>
-            <input v-model="form.hora_entrada" type="time" required />
-          </div>
-
-          <div class="form-group">
-            <label>Hora salida</label>
-            <input v-model="form.hora_salida" type="time" required />
-          </div>
-
-          <div class="form-group checkbox-group">
-            <label>
-              <input v-model="form.activo" type="checkbox" />
-              Activo
-            </label>
+            <label>Código</label>
+            <input v-model="form.codigo" type="text" required />
           </div>
 
           <div class="modal-actions">
@@ -111,13 +84,13 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import {
-  getDocentes,
-  createDocente,
-  updateDocente,
-  deleteDocente,
-} from '../services/docentes.service'
+  getCarreras,
+  createCarrera,
+  updateCarrera,
+  deleteCarrera,
+} from '../services/carreras.service'
 
-const docentes = ref([])
+const carreras = ref([])
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
@@ -127,10 +100,7 @@ const currentId = ref(null)
 
 const initialForm = () => ({
   nombre: '',
-  registro_personal: '',
-  hora_entrada: '',
-  hora_salida: '',
-  activo: true,
+  codigo: '',
 })
 
 const form = reactive(initialForm())
@@ -146,20 +116,15 @@ const resetForm = () => {
   isEditing.value = false
 }
 
-const formatTime = (value) => {
-  if (!value) return ''
-  return value.slice(0, 5)
-}
-
-const loadDocentes = async () => {
+const loadCarreras = async () => {
   loading.value = true
   resetMessages()
 
   try {
-    const { data } = await getDocentes()
-    docentes.value = data
+    const { data } = await getCarreras()
+    carreras.value = data
   } catch (err) {
-    error.value = err?.response?.data?.error || 'Error al cargar docentes'
+    error.value = err?.response?.data?.error || 'Error al cargar carreras'
   } finally {
     loading.value = false
   }
@@ -171,15 +136,12 @@ const openCreate = () => {
   showForm.value = true
 }
 
-const openEdit = (docente) => {
+const openEdit = (carrera) => {
   resetMessages()
   isEditing.value = true
-  currentId.value = docente.id
-  form.nombre = docente.nombre
-  form.registro_personal = docente.registro_personal
-  form.hora_entrada = formatTime(docente.hora_entrada)
-  form.hora_salida = formatTime(docente.hora_salida)
-  form.activo = docente.activo
+  currentId.value = carrera.id
+  form.nombre = carrera.nombre
+  form.codigo = carrera.codigo
   showForm.value = true
 }
 
@@ -192,43 +154,37 @@ const submitForm = async () => {
   resetMessages()
 
   try {
-    const payload = {
-      ...form,
-      hora_entrada: `${form.hora_entrada}:00`,
-      hora_salida: `${form.hora_salida}:00`,
-    }
-
     if (isEditing.value) {
-      await updateDocente(currentId.value, payload)
-      success.value = 'Docente actualizado correctamente'
+      await updateCarrera(currentId.value, form)
+      success.value = 'Carrera actualizada correctamente'
     } else {
-      await createDocente(payload)
-      success.value = 'Docente creado correctamente'
+      await createCarrera(form)
+      success.value = 'Carrera creada correctamente'
     }
 
     closeForm()
-    await loadDocentes()
+    await loadCarreras()
   } catch (err) {
-    error.value = err?.response?.data?.error || 'Error al guardar docente'
+    error.value = err?.response?.data?.error || 'Error al guardar carrera'
   }
 }
 
-const removeDocente = async (id) => {
+const removeCarrera = async (id) => {
   resetMessages()
 
-  const ok = window.confirm('¿Deseas eliminar este docente?')
+  const ok = window.confirm('¿Deseas eliminar esta carrera?')
   if (!ok) return
 
   try {
-    await deleteDocente(id)
-    success.value = 'Docente eliminado correctamente'
-    await loadDocentes()
+    await deleteCarrera(id)
+    success.value = 'Carrera eliminada correctamente'
+    await loadCarreras()
   } catch (err) {
-    error.value = err?.response?.data?.error || 'Error al eliminar docente'
+    error.value = err?.response?.data?.error || 'Error al eliminar carrera'
   }
 }
 
-onMounted(loadDocentes)
+onMounted(loadCarreras)
 </script>
 
 <style scoped>
@@ -338,23 +294,6 @@ tbody tr:hover {
   color: #166534;
 }
 
-.badge {
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.badge.active {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.badge.inactive {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -368,16 +307,19 @@ tbody tr:hover {
 .modal {
   background: white;
   width: 100%;
-  max-width: 620px;
+  max-width: 520px;
   border-radius: 12px;
   padding: 24px;
 }
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   margin-top: 16px;
+}
+
+.single-column {
+  grid-template-columns: 1fr;
 }
 
 .form-group {
@@ -393,12 +335,7 @@ tbody tr:hover {
   outline: none;
 }
 
-.checkbox-group {
-  justify-content: center;
-}
-
 .modal-actions {
-  grid-column: 1 / -1;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -409,10 +346,6 @@ tbody tr:hover {
   .header-row {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>

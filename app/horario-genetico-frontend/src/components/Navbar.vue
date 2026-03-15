@@ -8,6 +8,7 @@
       <RouterLink to="/">Inicio</RouterLink>
       <RouterLink to="/cursos">Cursos</RouterLink>
       <RouterLink to="/docentes">Docentes</RouterLink>
+      <RouterLink to="/carreras">Carreras</RouterLink>
       <RouterLink to="/salones">Salones</RouterLink>
       <RouterLink to="/generacion">Generación</RouterLink>
       <RouterLink to="/reportes">Reportes</RouterLink>

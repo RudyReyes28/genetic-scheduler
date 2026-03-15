@@ -7,6 +7,7 @@ import SalonesView from '../views/SalonesView.vue'
 import GeneracionView from '../views/GeneracionView.vue'
 import ReportesView from '../views/ReportesView.vue'
 import AcercaDeView from '../views/AcercaDeView.vue'
+import CarrerasView from '../views/CarrerasView.vue'
 
 const routes = [
   {
@@ -14,6 +15,8 @@ const routes = [
     name: 'home',
     component: HomeView,
   },
+    { path: '/carreras', name: 'carreras', component: CarrerasView },
+
   {
     path: '/cursos',
     name: 'cursos',
