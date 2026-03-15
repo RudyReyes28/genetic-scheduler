@@ -4,6 +4,10 @@ require('dotenv').config();
 
 require('./src/db');
 
+const carrerasRoutes = require('./src/routes/carreras.routes');
+const salonesRoutes = require('./src/routes/salones.routes');
+const docentesRoutes = require('./src/routes/docentes.routes');
+
 const app = express();
 
 app.use(cors());
@@ -16,6 +20,11 @@ app.get('/', (req, res) => {
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'API disponible' });
 });
+
+// RURAS ACA
+app.use('/api/carreras', carrerasRoutes);
+app.use('/api/salones', salonesRoutes);
+app.use('/api/docentes', docentesRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada' });
