@@ -4,6 +4,7 @@ const carrerasController = require('../controllers/carreras.controller');
 
 router.get('/', carrerasController.getAllCarreras);
 router.get('/:id', carrerasController.getCarreraById);
+router.get('/codigo/:codigo', carrerasController.getCarreraByCodigo);
 router.post('/', carrerasController.createCarrera);
 router.put('/:id', carrerasController.updateCarrera);
 router.delete('/:id', carrerasController.deleteCarrera);

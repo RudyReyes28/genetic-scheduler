@@ -15,6 +15,14 @@ const findById = async (id) => {
   return result.rows[0];
 };
 
+const findByCodigo = async (codigo) => {
+  const result = await db.query(
+    'SELECT * FROM carreras WHERE codigo = $1',
+    [codigo]
+  );
+  return result.rows[0];
+};
+
 const create = async ({ nombre, codigo }) => {
   const result = await db.query(
     `INSERT INTO carreras (nombre, codigo)
@@ -51,4 +59,5 @@ module.exports = {
   create,
   update,
   remove,
+  findByCodigo,
 };

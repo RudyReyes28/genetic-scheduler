@@ -23,6 +23,20 @@ const getCarreraById = async (req, res) => {
   }
 };
 
+const getCarreraByCodigo = async (req, res) => {
+  try {
+    const carrera = await carrerasService.findByCodigo(req.params.codigo);
+
+    if (!carrera) {
+      return res.status(404).json({ error: 'Carrera no encontrada' });
+    }
+
+    res.json(carrera);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener la carrera' });
+  }
+};
+
 const createCarrera = async (req, res) => {
   try {
     const { nombre, codigo } = req.body;
@@ -101,4 +115,6 @@ module.exports = {
   createCarrera,
   updateCarrera,
   deleteCarrera,
+  getCarreraByCodigo,
+  
 };
