@@ -14,10 +14,9 @@ pool.connect()
     console.error('Error al conectar a PostgreSQL:', error.message);
   });
 
-async function query(text, params) {
-  return pool.query(text, params);
-}
+const query = (text, params) => pool.query(text, params);
 
 module.exports = {
   query,
+  pool,
 };
