@@ -25,12 +25,9 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'API disponible' });
 });
 
-
-// RURAS ACA
 app.use('/api/carreras', carrerasRoutes);
 app.use('/api/salones', salonesRoutes);
 app.use('/api/docentes', docentesRoutes);
-
 
 app.use((req, res) => {
   res.status(404).json({
@@ -51,14 +48,7 @@ app.use((error, req, res, next) => {
 
 const port = process.env.PORT || 3000;
 
-
-app.use((req, res) => {
-  res.status(404).json({ error: 'Ruta no encontrada' });
-});
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
-  console.log(`API disponible en http://localhost:${PORT}/health`);
+app.listen(port, () => {
+  console.log(`Servidor corriendo en http://localhost:${port}`);
+  console.log(`API disponible en http://localhost:${port}/health`);
 });
