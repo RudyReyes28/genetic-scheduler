@@ -7,6 +7,7 @@ require('./src/db');
 const carrerasRoutes = require('./src/routes/carreras.routes');
 const salonesRoutes = require('./src/routes/salones.routes');
 const docentesRoutes = require('./src/routes/docentes.routes');
+const importarRoutes = require('./src/routes/importar.routes');
 
 const app = express();
 
@@ -26,8 +27,12 @@ app.use('/api/carreras', carrerasRoutes);
 app.use('/api/salones', salonesRoutes);
 app.use('/api/docentes', docentesRoutes);
 
-app.use((req, res) => {
-  res.status(404).json({ error: 'Ruta no encontrada' });
+// importacion de archivos csv
+app.use('/api/importar', importarRoutes);
+
+app.use((err, req, res, next) => {
+  console.error(' Error no controlado:', err);
+  res.status(500).json({ error: err.message || 'Error interno del servidor' });
 });
 
 const PORT = process.env.PORT || 3000;
