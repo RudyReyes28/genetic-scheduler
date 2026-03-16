@@ -4,6 +4,8 @@ const laboratoriosRoutes = require('./laboratorios/laboratorios.routes');
 const seccionesRoutes = require('./secciones/secciones.routes');
 const seccionLaboratorioRoutes = require('./seccion-laboratorio/seccionLaboratorio.routes');
 const docenteCursoRoutes = require('./docente-curso/docenteCurso.routes');
+const configuracionRoutes = require('./configuracion/configuracion.routes');
+const periodosRoutes = require('./periodos/periodos.routes');
 
 const carrerasRoutes = require('./carreras/carreras.routes');
 const salonesRoutes = require('./salones/salones.routes');
@@ -18,6 +20,8 @@ router.use('/laboratorios', laboratoriosRoutes);
 router.use('/secciones', seccionesRoutes);
 router.use('/seccion-laboratorio', seccionLaboratorioRoutes);
 router.use('/docente-curso', docenteCursoRoutes);
+router.use('/configuracion', configuracionRoutes);
+router.use('/periodos', periodosRoutes);
 
 router.use('/carreras', carrerasRoutes);
 router.use('/salones', salonesRoutes);
