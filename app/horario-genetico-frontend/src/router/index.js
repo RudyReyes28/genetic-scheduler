@@ -8,6 +8,7 @@ import GeneracionView from '../views/GeneracionView.vue'
 import ReportesView from '../views/ReportesView.vue'
 import AcercaDeView from '../views/AcercaDeView.vue'
 import CarrerasView from '../views/CarrerasView.vue'
+import ImportacionesView from '../views/ImportacionesView.vue'
 
 const routes = [
   {
@@ -47,6 +48,7 @@ const routes = [
     name: 'acercaDe',
     component: AcercaDeView,
   },
+  { path: '/importaciones', name: 'importaciones', component: ImportacionesView },
 ]
 
 const router = createRouter({

@@ -115,7 +115,7 @@ import {
   createDocente,
   updateDocente,
   deleteDocente,
-} from '../services/docentes.service'
+} from '../services/docentes/docentes.service'
 
 const docentes = ref([])
 const loading = ref(false)

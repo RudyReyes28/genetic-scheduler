@@ -210,7 +210,7 @@ import {
   createSalon,
   updateSalon,
   deleteSalon,
-} from '../services/salones.service'
+} from '../services/salones/salones.service'
 
 const salones = ref([])
 const loading = ref(false)

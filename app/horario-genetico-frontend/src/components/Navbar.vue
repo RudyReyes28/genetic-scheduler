@@ -11,6 +11,7 @@
       <RouterLink to="/carreras">Carreras</RouterLink>
       <RouterLink to="/salones">Salones</RouterLink>
       <RouterLink to="/generacion">Generación</RouterLink>
+      <RouterLink to="/importaciones">Importaciones</RouterLink>
       <RouterLink to="/reportes">Reportes</RouterLink>
       <RouterLink to="/acerca-de">Acerca de</RouterLink>
     </div>

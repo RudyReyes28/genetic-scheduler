@@ -88,7 +88,7 @@ import {
   createCarrera,
   updateCarrera,
   deleteCarrera,
-} from '../services/carreras.service'
+} from '../services/carreras/carreras.service'
 
 const carreras = ref([])
 const loading = ref(false)

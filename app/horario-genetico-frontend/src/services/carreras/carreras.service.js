@@ -1,4 +1,4 @@
-import api from './api'
+import api from '../api'
 
 export const getCarreras = () => api.get('/carreras')
 export const getCarreraById = (id) => api.get(`/carreras/${id}`)
