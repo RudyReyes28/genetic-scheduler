@@ -26,6 +26,6 @@ router.use('/periodos', periodosRoutes);
 router.use('/carreras', carrerasRoutes);
 router.use('/salones', salonesRoutes);
 router.use('/docentes', docentesRoutes);
-router.use('/importaciones', importarRoutes);
+router.use('/importar', importarRoutes);
 
 module.exports = router;
