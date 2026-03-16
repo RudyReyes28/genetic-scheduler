@@ -1,4 +1,4 @@
-const docentesService = require('../services/docentes.service');
+const docentesService = require('../../services/docentes/docentes.service');
 
 const getAllDocentes = async (req, res) => {
   try {

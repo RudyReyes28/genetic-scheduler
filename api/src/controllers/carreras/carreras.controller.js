@@ -1,4 +1,4 @@
-const carrerasService = require('../services/carreras.service');
+const carrerasService = require('../../services/carreras/carreras.service');
 
 const getAllCarreras = async (req, res) => {
   try {

@@ -1,4 +1,4 @@
-const salonesService = require('../services/salones.service');
+const salonesService = require('../../services/salones/salones.service');
 
 const getAllSalones = async (req, res) => {
   try {
