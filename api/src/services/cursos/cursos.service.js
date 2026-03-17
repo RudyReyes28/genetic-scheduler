@@ -161,72 +161,155 @@ async function remove(id) {
   }
 }
 
-
 // ===== ACCIONES MASIVAS =====
 
 async function desactivarSemestresPares() {
+  const client = await db.pool.connect();
+
   try {
-    const { rowCount } = await db.query(
+    await client.query('BEGIN');
+
+    const cursosResult = await client.query(
       `UPDATE cursos
        SET activo = FALSE
-       WHERE semestre % 2 = 0`
+       WHERE semestre % 2 = 0
+       RETURNING id`
     );
 
+    const cursoIds = cursosResult.rows.map((row) => row.id);
+
+    let laboratoriosAfectados = 0;
+
+    if (cursoIds.length > 0) {
+      const labsResult = await client.query(
+        `UPDATE laboratorios
+         SET activo = FALSE
+         WHERE curso_id = ANY($1::int[])`,
+        [cursoIds]
+      );
+
+      laboratoriosAfectados = labsResult.rowCount;
+    }
+
+    await client.query('COMMIT');
+
     return {
-      message: 'Cursos de semestre par desactivados correctamente.',
-      afectados: rowCount,
+      message: 'Cursos de semestre par y sus laboratorios fueron desactivados correctamente.',
+      cursos_afectados: cursosResult.rowCount,
+      laboratorios_afectados: laboratoriosAfectados,
     };
   } catch (error) {
+    await client.query('ROLLBACK');
     throw mapPgError(error);
+  } finally {
+    client.release();
   }
 }
 
 async function desactivarSemestresImpares() {
+  const client = await db.pool.connect();
+
   try {
-    const { rowCount } = await db.query(
+    await client.query('BEGIN');
+
+    const cursosResult = await client.query(
       `UPDATE cursos
        SET activo = FALSE
-       WHERE semestre % 2 <> 0`
+       WHERE semestre % 2 <> 0
+       RETURNING id`
     );
 
+    const cursoIds = cursosResult.rows.map((row) => row.id);
+
+    let laboratoriosAfectados = 0;
+
+    if (cursoIds.length > 0) {
+      const labsResult = await client.query(
+        `UPDATE laboratorios
+         SET activo = FALSE
+         WHERE curso_id = ANY($1::int[])`,
+        [cursoIds]
+      );
+
+      laboratoriosAfectados = labsResult.rowCount;
+    }
+
+    await client.query('COMMIT');
+
     return {
-      message: 'Cursos de semestre impar desactivados correctamente.',
-      afectados: rowCount,
+      message: 'Cursos de semestre impar y sus laboratorios fueron desactivados correctamente.',
+      cursos_afectados: cursosResult.rowCount,
+      laboratorios_afectados: laboratoriosAfectados,
     };
   } catch (error) {
+    await client.query('ROLLBACK');
     throw mapPgError(error);
+  } finally {
+    client.release();
   }
 }
 
 async function desactivarTodos() {
+  const client = await db.pool.connect();
+
   try {
-    const { rowCount } = await db.query(
+    await client.query('BEGIN');
+
+    const cursosResult = await client.query(
       `UPDATE cursos
+       SET activo = FALSE
+       RETURNING id`
+    );
+
+    const labsResult = await client.query(
+      `UPDATE laboratorios
        SET activo = FALSE`
     );
 
+    await client.query('COMMIT');
+
     return {
-      message: 'Todos los cursos fueron desactivados correctamente.',
-      afectados: rowCount,
+      message: 'Todos los cursos y laboratorios fueron desactivados correctamente.',
+      cursos_afectados: cursosResult.rowCount,
+      laboratorios_afectados: labsResult.rowCount,
     };
   } catch (error) {
+    await client.query('ROLLBACK');
     throw mapPgError(error);
+  } finally {
+    client.release();
   }
 }
 
 async function activarTodos() {
+  const client = await db.pool.connect();
+
   try {
-    const { rowCount } = await db.query(
+    await client.query('BEGIN');
+
+    const cursosResult = await client.query(
       `UPDATE cursos
+       SET activo = TRUE
+       RETURNING id`
+    );
+
+    const labsResult = await client.query(
+      `UPDATE laboratorios
        SET activo = TRUE`
     );
 
+    await client.query('COMMIT');
+
     return {
-      message: 'Todos los cursos fueron activados correctamente.',
-      afectados: rowCount,
+      message: 'Todos los cursos y laboratorios fueron activados correctamente.',
+      cursos_afectados: cursosResult.rowCount,
+      laboratorios_afectados: labsResult.rowCount,
     };
   } catch (error) {
+    await client.query('ROLLBACK');
     throw mapPgError(error);
+  } finally {
+    client.release();
   }
 }
 
