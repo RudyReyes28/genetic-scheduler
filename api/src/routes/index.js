@@ -6,6 +6,7 @@ const seccionLaboratorioRoutes = require('./seccion-laboratorio/seccionLaborator
 const docenteCursoRoutes = require('./docente-curso/docenteCurso.routes');
 const configuracionRoutes = require('./configuracion/configuracion.routes');
 const periodosRoutes = require('./periodos/periodos.routes');
+const diasHorarioRoutes = require('./dias-horario/diasHorario.routes');
 
 const carrerasRoutes = require('./carreras/carreras.routes');
 const salonesRoutes = require('./salones/salones.routes');
@@ -22,6 +23,7 @@ router.use('/seccion-laboratorio', seccionLaboratorioRoutes);
 router.use('/docente-curso', docenteCursoRoutes);
 router.use('/configuracion', configuracionRoutes);
 router.use('/periodos', periodosRoutes);
+router.use('/dias-horario', diasHorarioRoutes);
 
 router.use('/carreras', carrerasRoutes);
 router.use('/salones', salonesRoutes);

@@ -20,6 +20,12 @@ async function getAll() {
   return rows;
 }
 
+//Obtener secciones por id del curso
+async function getByCursoId(cursoId) {
+  const { rows } = await db.query('SELECT * FROM secciones WHERE curso_id = $1 ORDER BY id ASC', [cursoId]);
+  return rows;
+}
+
 async function getById(id) {
   const { rows } = await db.query('SELECT * FROM secciones WHERE id = $1', [id]);
   if (rows.length === 0) {
@@ -64,6 +70,8 @@ async function update(id, payload) {
   try {
     const current = await getById(id);
 
+    const resolveField = (key, currentValue) => (payload[key] !== undefined ? payload[key] : currentValue);
+
     const nextCursoId = payload.curso_id ?? current.curso_id;
     if (nextCursoId !== current.curso_id) {
       await ensureCursoExiste(nextCursoId);
@@ -84,11 +92,11 @@ async function update(id, payload) {
       [
         nextCursoId,
         payload.letra?.trim() ?? current.letra,
-        payload.num_estudiantes_seccion ?? current.num_estudiantes_seccion,
-        payload.salon_fijo_id ?? current.salon_fijo_id,
-        payload.docente_fijo_id ?? current.docente_fijo_id,
-        payload.periodo_fijo_inicio_id ?? current.periodo_fijo_inicio_id,
-        payload.dia_horario_fijo_id ?? current.dia_horario_fijo_id,
+        resolveField('num_estudiantes_seccion', current.num_estudiantes_seccion),
+        resolveField('salon_fijo_id', current.salon_fijo_id),
+        resolveField('docente_fijo_id', current.docente_fijo_id),
+        resolveField('periodo_fijo_inicio_id', current.periodo_fijo_inicio_id),
+        resolveField('dia_horario_fijo_id', current.dia_horario_fijo_id),
         payload.sin_salon !== undefined ? toBool(payload.sin_salon) : current.sin_salon,
         id,
       ],
@@ -116,4 +124,5 @@ module.exports = {
   create,
   update,
   remove,
+  getByCursoId,
 };
