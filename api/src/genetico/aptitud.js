@@ -20,7 +20,6 @@
 // BONOS:
 //    +30  cursos del mismo semestre consecutivos  (facilita asistencia)
 //    +10  salón con capacidad adecuada            (num_estudiantes <= capacidad)
-// ============================================================
 
 //  Helpers
 
