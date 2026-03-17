@@ -33,6 +33,28 @@
       </div>
     </div>
 
+    <div class="bulk-actions-card">
+      <h3 class="section-title">Acciones masivas</h3>
+
+      <div class="bulk-actions-row">
+        <button class="btn-warning" @click="handleDesactivarPares">
+          Desactivar semestres pares
+        </button>
+
+        <button class="btn-warning" @click="handleDesactivarImpares">
+          Desactivar semestres impares
+        </button>
+
+        <button class="btn-danger" @click="handleDesactivarTodos">
+          Desactivar todos
+        </button>
+
+        <button class="btn-success" @click="handleActivarTodos">
+          Activar todos
+        </button>
+      </div>
+    </div>
+
     <div class="card">
       <table class="table">
         <thead>
@@ -268,7 +290,16 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { getCarreras } from '../services/carreras/carreras.service'
-import { createCurso, deleteCurso, getCursos, updateCurso } from '../services/cursos/cursos.service'
+import {
+  activarTodosLosCursos,
+  createCurso,
+  deleteCurso,
+  desactivarCursosImpares,
+  desactivarCursosPares,
+  desactivarTodosLosCursos,
+  getCursos,
+  updateCurso,
+} from '../services/cursos/cursos.service'
 import { getDocenteCursos } from '../services/docente-curso/docenteCurso.service'
 import { getDocentes } from '../services/docentes/docentes.service'
 import {
@@ -524,6 +555,66 @@ const removeCurso = async (id) => {
   }
 }
 
+const handleDesactivarPares = async () => {
+  const ok = confirm('¿Deseas desactivar todos los cursos de semestre par?')
+  if (!ok) return
+
+  resetMessages()
+
+  try {
+    const { data } = await desactivarCursosPares()
+    success.value = `${data.message} Afectados: ${data.afectados}`
+    await loadCursos()
+  } catch (err) {
+    error.value = err?.response?.data?.error || 'Error desactivando cursos pares'
+  }
+}
+
+const handleDesactivarImpares = async () => {
+  const ok = confirm('¿Deseas desactivar todos los cursos de semestre impar?')
+  if (!ok) return
+
+  resetMessages()
+
+  try {
+    const { data } = await desactivarCursosImpares()
+    success.value = `${data.message} Afectados: ${data.afectados}`
+    await loadCursos()
+  } catch (err) {
+    error.value = err?.response?.data?.error || 'Error desactivando cursos impares'
+  }
+}
+
+const handleDesactivarTodos = async () => {
+  const ok = confirm('¿Deseas desactivar todos los cursos?')
+  if (!ok) return
+
+  resetMessages()
+
+  try {
+    const { data } = await desactivarTodosLosCursos()
+    success.value = `${data.message} Afectados: ${data.afectados}`
+    await loadCursos()
+  } catch (err) {
+    error.value = err?.response?.data?.error || 'Error desactivando todos los cursos'
+  }
+}
+
+const handleActivarTodos = async () => {
+  const ok = confirm('¿Deseas activar todos los cursos?')
+  if (!ok) return
+
+  resetMessages()
+
+  try {
+    const { data } = await activarTodosLosCursos()
+    success.value = `${data.message} Afectados: ${data.afectados}`
+    await loadCursos()
+  } catch (err) {
+    error.value = err?.response?.data?.error || 'Error activando todos los cursos'
+  }
+}
+
 const openAssignLaboratorio = async (curso) => {
   resetMessages()
   closeCursoActions()
@@ -623,6 +714,27 @@ onMounted(loadAll)
   box-shadow:0 3px 10px rgba(0,0,0,0.08);
 }
 
+.bulk-actions-card{
+  background:white;
+  border-radius:10px;
+  padding:14px;
+  margin-bottom:16px;
+  box-shadow:0 3px 10px rgba(0,0,0,0.08);
+}
+
+.section-title{
+  margin:0 0 12px 0;
+  font-size:16px;
+  font-weight:600;
+  color:#111827;
+}
+
+.bulk-actions-row{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
 .filter-row{
   display:flex;
   gap:12px;
@@ -655,6 +767,45 @@ onMounted(loadAll)
 
 .btn:hover{
   background:#1d4ed8;
+}
+
+.btn-warning{
+  background:#f59e0b;
+  color:white;
+  border:none;
+  padding:10px 14px;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.btn-warning:hover{
+  background:#d97706;
+}
+
+.btn-danger{
+  background:#dc2626;
+  color:white;
+  border:none;
+  padding:10px 14px;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.btn-danger:hover{
+  background:#b91c1c;
+}
+
+.btn-success{
+  background:#16a34a;
+  color:white;
+  border:none;
+  padding:10px 14px;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.btn-success:hover{
+  background:#15803d;
 }
 
 .table{
@@ -822,5 +973,27 @@ th{
 
 .success{
   background:#dcfce7;
+}
+
+.empty{
+  text-align:center;
+  color:#6b7280;
+}
+
+@media (max-width: 900px){
+  .filter-row,
+  .bulk-actions-row,
+  .header-row{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .form-grid{
+    grid-template-columns:1fr;
+  }
+
+  .modal{
+    width:95%;
+  }
 }
 </style>

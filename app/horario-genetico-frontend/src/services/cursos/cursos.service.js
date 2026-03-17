@@ -19,3 +19,20 @@ export const updateCurso = (id, data) => {
 export const deleteCurso = (id) => {
   return api.delete(`/cursos/${id}`)
 }
+
+// Acciones masivas
+export const desactivarCursosPares = () => {
+  return api.patch('/cursos/desactivar-pares')
+}
+
+export const desactivarCursosImpares = () => {
+  return api.patch('/cursos/desactivar-impares')
+}
+
+export const desactivarTodosLosCursos = () => {
+  return api.patch('/cursos/desactivar-todos')
+}
+
+export const activarTodosLosCursos = () => {
+  return api.patch('/cursos/activar-todos')
+}

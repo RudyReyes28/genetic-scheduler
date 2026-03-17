@@ -161,10 +161,83 @@ async function remove(id) {
   }
 }
 
+
+// ===== ACCIONES MASIVAS =====
+
+async function desactivarSemestresPares() {
+  try {
+    const { rowCount } = await db.query(
+      `UPDATE cursos
+       SET activo = FALSE
+       WHERE semestre % 2 = 0`
+    );
+
+    return {
+      message: 'Cursos de semestre par desactivados correctamente.',
+      afectados: rowCount,
+    };
+  } catch (error) {
+    throw mapPgError(error);
+  }
+}
+
+async function desactivarSemestresImpares() {
+  try {
+    const { rowCount } = await db.query(
+      `UPDATE cursos
+       SET activo = FALSE
+       WHERE semestre % 2 <> 0`
+    );
+
+    return {
+      message: 'Cursos de semestre impar desactivados correctamente.',
+      afectados: rowCount,
+    };
+  } catch (error) {
+    throw mapPgError(error);
+  }
+}
+
+async function desactivarTodos() {
+  try {
+    const { rowCount } = await db.query(
+      `UPDATE cursos
+       SET activo = FALSE`
+    );
+
+    return {
+      message: 'Todos los cursos fueron desactivados correctamente.',
+      afectados: rowCount,
+    };
+  } catch (error) {
+    throw mapPgError(error);
+  }
+}
+
+async function activarTodos() {
+  try {
+    const { rowCount } = await db.query(
+      `UPDATE cursos
+       SET activo = TRUE`
+    );
+
+    return {
+      message: 'Todos los cursos fueron activados correctamente.',
+      afectados: rowCount,
+    };
+  } catch (error) {
+    throw mapPgError(error);
+  }
+}
+
 module.exports = {
   getAll,
   getById,
   create,
   update,
   remove,
+  desactivarSemestresPares,
+  desactivarSemestresImpares,
+  desactivarTodos,
+  activarTodos,
 };

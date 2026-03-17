@@ -558,12 +558,23 @@ const importarLaboratorios = async (fileBuffer) => {
           estado: 'actualizado',
           motivo: `Laboratorio para curso ${cursoResult.rows[0].nombre} ya existía`,
         });
+        await db.query(
+          `UPDATE cursos
+           set tiene_laboratorio = $1 WHERE  id = $2`,
+          [true, curso_id]
+        );
       } else {
         await db.query(
           `INSERT INTO laboratorios
            (curso_id, nombre, num_periodos, puede_manana, puede_tarde, activo)
            VALUES ($1, $2, $3, $4, $5, $6)`,
           [curso_id, nombre, num_periodos, puede_manana, puede_tarde, activo]
+        );
+
+        await db.query(
+          `UPDATE cursos
+           set tiene_laboratorio = $1 WHERE  id = $2`,
+          [true, curso_id]
         );
 
         insertados++;
