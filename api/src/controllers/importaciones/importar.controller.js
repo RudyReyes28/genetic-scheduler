@@ -72,10 +72,43 @@ const importarSalones = async (req, res) => {
     res.status(500).json({ error: 'Error al importar salones' });
   }
 };
+const importarLaboratorios = async (req, res) => {
+  if (!validarArchivo(req, res)) return;
+
+  try {
+    const resultado = await importarService.importarLaboratorios(req.file.buffer);
+
+    res.json({
+      mensaje: 'Importación de laboratorios completada',
+      ...resultado,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al importar laboratorios' });
+  }
+};
+
+const importarSecciones = async (req, res) => {
+  if (!validarArchivo(req, res)) return;
+
+  try {
+    const resultado = await importarService.importarSecciones(req.file.buffer);
+
+    res.json({
+      mensaje: 'Importación de secciones completada',
+      ...resultado,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al importar secciones' });
+  }
+};
 
 module.exports = {
   importarDocentes,
   importarCursos,
   importarDocenteCurso,
   importarSalones,
+  importarLaboratorios,
+  importarSecciones,
 };

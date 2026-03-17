@@ -23,5 +23,7 @@ router.post('/docentes', upload.single('archivo'), importarController.importarDo
 router.post('/cursos', upload.single('archivo'), importarController.importarCursos);
 router.post('/docente-curso', upload.single('archivo'), importarController.importarDocenteCurso);
 router.post('/salones', upload.single('archivo'), importarController.importarSalones);
+router.post('/laboratorios', upload.single('archivo'), importarController.importarLaboratorios);
+router.post('/secciones', upload.single('archivo'), importarController.importarSecciones);
 
 module.exports = router;

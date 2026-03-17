@@ -474,9 +474,246 @@ const importarSalones = async (fileBuffer) => {
   };
 };
 
+const importarLaboratorios = async (fileBuffer) => {
+  const rows = parseCsvBuffer(fileBuffer);
+
+  let insertados = 0;
+  let actualizados = 0;
+  let omitidos = 0;
+  const detalles = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const fila = i + 2;
+
+    const codigo_curso = row.codigo_curso?.trim();
+    const nombre = row.nombre?.trim();
+    const num_periodos =
+      row.num_periodos !== undefined && row.num_periodos !== ''
+        ? Number(row.num_periodos)
+        : 3;
+
+    const puede_manana = normalizeBoolean(row.puede_manana, true);
+    const puede_tarde = normalizeBoolean(row.puede_tarde, true);
+    const activo = normalizeBoolean(row.activo, true);
+
+    if (!codigo_curso || !nombre) {
+      omitidos++;
+      detalles.push({
+        fila,
+        estado: 'omitido',
+        motivo: 'Faltan columnas requeridas: codigo_curso, nombre',
+      });
+      continue;
+    }
+
+    if (Number.isNaN(num_periodos) || num_periodos <= 0) {
+      omitidos++;
+      detalles.push({
+        fila,
+        estado: 'omitido',
+        motivo: 'num_periodos debe ser un número mayor que 0',
+      });
+      continue;
+    }
+
+    try {
+      const cursoResult = await db.query(
+        `SELECT id FROM cursos WHERE codigo = $1`,
+        [codigo_curso]
+      );
+
+      if (cursoResult.rows.length === 0) {
+        omitidos++;
+        detalles.push({
+          fila,
+          estado: 'omitido',
+          motivo: `No existe curso con código ${codigo_curso}`,
+        });
+        continue;
+      }
+
+      const curso_id = cursoResult.rows[0].id;
+
+      const existente = await db.query(
+        `SELECT id FROM laboratorios WHERE curso_id = $1`,
+        [curso_id]
+      );
+
+      if (existente.rows.length > 0) {
+        await db.query(
+          `UPDATE laboratorios
+           SET nombre = $1,
+               num_periodos = $2,
+               puede_manana = $3,
+               puede_tarde = $4,
+               activo = $5
+           WHERE curso_id = $6`,
+          [nombre, num_periodos, puede_manana, puede_tarde, activo, curso_id]
+        );
+
+        actualizados++;
+        detalles.push({
+          fila,
+          estado: 'actualizado',
+          motivo: `Laboratorio para curso ${codigo_curso} ya existía`,
+        });
+      } else {
+        await db.query(
+          `INSERT INTO laboratorios
+           (curso_id, nombre, num_periodos, puede_manana, puede_tarde, activo)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [curso_id, nombre, num_periodos, puede_manana, puede_tarde, activo]
+        );
+
+        insertados++;
+        detalles.push({
+          fila,
+          estado: 'insertado',
+          motivo: `Laboratorio para curso ${codigo_curso} insertado correctamente`,
+        });
+      }
+    } catch (error) {
+      omitidos++;
+      detalles.push({
+        fila,
+        estado: 'omitido',
+        motivo: error.message,
+      });
+    }
+  }
+
+  return {
+    total_filas: rows.length,
+    insertados,
+    actualizados,
+    omitidos,
+    detalles,
+  };
+};
+
+const importarSecciones = async (fileBuffer) => {
+  const rows = parseCsvBuffer(fileBuffer);
+
+  let insertados = 0;
+  let actualizados = 0;
+  let omitidos = 0;
+  const detalles = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const fila = i + 2;
+
+    const codigo_curso = row.codigo_curso?.trim();
+    const letra = row.letra?.trim();
+    const num_estudiantes_seccion =
+      row.num_estudiantes_seccion !== undefined && row.num_estudiantes_seccion !== ''
+        ? Number(row.num_estudiantes_seccion)
+        : null;
+
+    const sin_salon = normalizeBoolean(row.sin_salon, false);
+
+    if (!codigo_curso || !letra) {
+      omitidos++;
+      detalles.push({
+        fila,
+        estado: 'omitido',
+        motivo: 'Faltan columnas requeridas: codigo_curso, letra',
+      });
+      continue;
+    }
+
+    if (
+      num_estudiantes_seccion !== null &&
+      (Number.isNaN(num_estudiantes_seccion) || num_estudiantes_seccion < 0)
+    ) {
+      omitidos++;
+      detalles.push({
+        fila,
+        estado: 'omitido',
+        motivo: 'num_estudiantes_seccion debe ser un número válido',
+      });
+      continue;
+    }
+
+    try {
+      const cursoResult = await db.query(
+        `SELECT id FROM cursos WHERE codigo = $1`,
+        [codigo_curso]
+      );
+
+      if (cursoResult.rows.length === 0) {
+        omitidos++;
+        detalles.push({
+          fila,
+          estado: 'omitido',
+          motivo: `No existe curso con código ${codigo_curso}`,
+        });
+        continue;
+      }
+
+      const curso_id = cursoResult.rows[0].id;
+
+      const existente = await db.query(
+        `SELECT id FROM secciones
+         WHERE curso_id = $1 AND letra = $2`,
+        [curso_id, letra]
+      );
+
+      if (existente.rows.length > 0) {
+        await db.query(
+          `UPDATE secciones
+           SET num_estudiantes_seccion = $1,
+               sin_salon = $2
+           WHERE curso_id = $3 AND letra = $4`,
+          [num_estudiantes_seccion, sin_salon, curso_id, letra]
+        );
+
+        actualizados++;
+        detalles.push({
+          fila,
+          estado: 'actualizado',
+          motivo: `Sección ${codigo_curso}-${letra} ya existía`,
+        });
+      } else {
+        await db.query(
+          `INSERT INTO secciones
+           (curso_id, letra, num_estudiantes_seccion, sin_salon)
+           VALUES ($1, $2, $3, $4)`,
+          [curso_id, letra, num_estudiantes_seccion, sin_salon]
+        );
+
+        insertados++;
+        detalles.push({
+          fila,
+          estado: 'insertado',
+          motivo: `Sección ${codigo_curso}-${letra} insertada correctamente`,
+        });
+      }
+    } catch (error) {
+      omitidos++;
+      detalles.push({
+        fila,
+        estado: 'omitido',
+        motivo: error.message,
+      });
+    }
+  }
+
+  return {
+    total_filas: rows.length,
+    insertados,
+    actualizados,
+    omitidos,
+    detalles,
+  };
+};
+
 module.exports = {
   importarDocentes,
   importarCursos,
   importarDocenteCurso,
   importarSalones,
+  importarLaboratorios,
+  importarSecciones,
 };
