@@ -186,3 +186,13 @@ CREATE TABLE configuracion_algoritmo (
 
 ALTER TABLE cursos
 ADD CONSTRAINT uq_cursos_codigo UNIQUE (codigo);
+
+
+CREATE TABLE horario_historial (
+  id            SERIAL PRIMARY KEY,
+  horario_id    INT REFERENCES horarios(id) ON DELETE CASCADE,
+  generacion    INT     NOT NULL,
+  mejor_aptitud FLOAT   NOT NULL,
+  conflictos    INT     NOT NULL
+);
+ CREATE INDEX idx_historial_horario ON horario_historial(horario_id);

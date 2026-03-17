@@ -4,6 +4,9 @@ const { cargarContexto, generarPoblacion, generarIndividuo, evaluarAptitud,
   seleccionarPadres, evaluarPoblacion, cruzar, mutar, ejecutarAG, guardarHorario
 } = require('../../genetico');
 
+const algoritmoController = require('../../controllers/algoritmo/algoritmo.controller');
+
+
 router.get('/test-cromosoma', async (req, res) => {
   const ctx        = await cargarContexto();
   const poblacion  = generarPoblacion(ctx);
@@ -137,5 +140,20 @@ router.get('/test-algoritmo', async (req, res) => {
                         historial[0].mejorAptitud,
   });
 });
+
+// Ejecutar el AG y guardar resultado
+router.post('/ejecutar',          algoritmoController.ejecutar);
+ 
+// Consultar estado de la última ejecución
+router.get('/estado',             algoritmoController.estado);
+ 
+// Historial de aptitud de una ejecución
+router.get('/historial/:id',      algoritmoController.historial);
+ 
+// Configuración del algoritmo
+router.get('/configuracion',      algoritmoController.getConfiguracion);
+router.put('/configuracion',      algoritmoController.updateConfiguracion);
+ 
+
 
 module.exports = router;
