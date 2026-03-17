@@ -14,6 +14,9 @@ const docentesRoutes = require('./docentes/docentes.routes');
 const importarRoutes = require('./importaciones/importar.routes');
 
 
+const algoritmoRoutes = require('./algoritmo/algoritmo.routes');
+
+
 const router = express.Router();
 
 router.use('/cursos', cursosRoutes);
@@ -29,5 +32,8 @@ router.use('/carreras', carrerasRoutes);
 router.use('/salones', salonesRoutes);
 router.use('/docentes', docentesRoutes);
 router.use('/importar', importarRoutes);
+
+
+router.use('/algoritmo', algoritmoRoutes);
 
 module.exports = router;
