@@ -94,17 +94,26 @@
 
           <div class="form-group">
             <label>Método selección</label>
-            <input v-model="form.metodo_seleccion" required />
+            <select v-model="form.metodo_seleccion" required>
+              <option value="torneo">torneo</option>
+              <option value="ruleta">ruleta</option>
+            </select>
           </div>
 
           <div class="form-group">
             <label>Método cruce</label>
-            <input v-model="form.metodo_cruce" required />
+            <select v-model="form.metodo_cruce" required>
+              <option value="un_punto">un_punto</option>
+              <option value="multipunto">multipunto</option>
+            </select>
           </div>
 
           <div class="form-group">
             <label>Método mutación</label>
-            <input v-model="form.metodo_mutacion" required />
+            <select v-model="form.metodo_mutacion" required>
+              <option value="intercambio">intercambio</option>
+              <option value="reisercion">reisercion</option>
+            </select>
           </div>
 
           <div class="form-group">
@@ -353,6 +362,12 @@ th{
 }
 
 .form-group input{
+  padding:8px 10px;
+  border:1px solid #d1d5db;
+  border-radius:6px;
+}
+
+.form-group select{
   padding:8px 10px;
   border:1px solid #d1d5db;
   border-radius:6px;

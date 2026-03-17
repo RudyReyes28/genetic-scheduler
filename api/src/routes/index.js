@@ -16,6 +16,8 @@ const importarRoutes = require('./importaciones/importar.routes');
 
 const algoritmoRoutes = require('./algoritmo/algoritmo.routes');
 
+const horariosRoutes = require('./horarios/horarios.routes');
+
 
 const router = express.Router();
 
@@ -35,5 +37,5 @@ router.use('/importar', importarRoutes);
 
 
 router.use('/algoritmo', algoritmoRoutes);
-
+router.use('/horarios', horariosRoutes);
 module.exports = router;

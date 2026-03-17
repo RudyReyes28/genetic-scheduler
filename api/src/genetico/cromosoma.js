@@ -92,6 +92,7 @@ function generarGenSeccion(seccion, ctx) {
     periodo_fin_id:         periodo_inicio_id,
     dia_horario_id,
     // metadatos (solo lectura para el AG)
+    curso_id:               seccion.curso_id,
     es_laboratorio:         false,
     sin_salon:              seccion.sin_salon,
     semestre:               seccion.semestre,
@@ -141,6 +142,7 @@ function generarGenLab(lab, ctx) {
     periodo_fin_id,
     dia_horario_id,
     // metadatos
+    curso_id:               lab.curso_id,
     es_laboratorio:         true,
     sin_salon:              false,
     semestre:               lab.semestre,

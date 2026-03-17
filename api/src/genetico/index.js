@@ -7,6 +7,15 @@ const { generarIndividuo, generarPoblacion,
 
 const { evaluarAptitud, evaluarPoblacion } = require('./aptitud');
 
+
+const { seleccionarPadres } = require('./seleccion');
+
+const { cruzar } = require('./cruce');
+
+const { mutar } = require('./mutacion');
+
+const { ejecutarAG, guardarHorario } = require('./algoritmo');
+
 module.exports = {
   cargarContexto,
   generarIndividuo,
@@ -17,5 +26,10 @@ module.exports = {
   salonesValidos,
   calcularPeriodoFin,
   evaluarAptitud,
-  evaluarPoblacion
+  evaluarPoblacion,
+  seleccionarPadres,
+  cruzar,
+  mutar,
+  ejecutarAG,
+  guardarHorario
 };
