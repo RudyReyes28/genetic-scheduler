@@ -5,6 +5,8 @@ const { generarIndividuo, generarPoblacion,
         periodosValidos, salonesValidos,
         calcularPeriodoFin }                    = require('./cromosoma');
 
+const { evaluarAptitud, evaluarPoblacion } = require('./aptitud');
+
 module.exports = {
   cargarContexto,
   generarIndividuo,
@@ -14,4 +16,6 @@ module.exports = {
   periodosValidos,
   salonesValidos,
   calcularPeriodoFin,
+  evaluarAptitud,
+  evaluarPoblacion
 };
