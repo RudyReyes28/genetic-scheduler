@@ -12,6 +12,27 @@
     <div v-if="error" class="alert error">{{ error }}</div>
     <div v-if="success" class="alert success">{{ success }}</div>
 
+    <div class="filter-card">
+      <div class="filter-row">
+        <div class="form-group">
+          <label>Filtrar por curso</label>
+          <input v-model="cursoFilter" placeholder="Código o nombre" />
+        </div>
+
+        <div class="form-group">
+          <label>Filtrar por docente</label>
+          <select v-model="docenteFilterId">
+            <option value="">Todos los docentes</option>
+            <option v-for="docente in docentes" :key="docente.id" :value="String(docente.id)">
+              {{ docenteLabel(docente) }}
+            </option>
+          </select>
+        </div>
+
+        <button class="btn-secondary" @click="clearFilters">Limpiar</button>
+      </div>
+    </div>
+
     <div class="card">
       <table class="table">
         <thead>
@@ -19,6 +40,7 @@
             <th>ID</th>
             <th>Código</th>
             <th>Nombre</th>
+            <th>Carrera</th>
             <th>Semestre</th>
             <th>Tipo</th>
             <th>Estudiantes</th>
@@ -28,17 +50,20 @@
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="8" class="empty">Cargando cursos...</td>
+            <td colspan="9" class="empty">Cargando cursos...</td>
           </tr>
 
-          <tr v-else-if="cursos.length === 0">
-            <td colspan="8" class="empty">No hay cursos registrados</td>
+          <tr v-else-if="filteredCursos.length === 0">
+            <td colspan="9" class="empty">
+              {{ cursos.length === 0 ? 'No hay cursos registrados' : 'No hay cursos que coincidan con los filtros' }}
+            </td>
           </tr>
 
-          <tr v-for="curso in cursos" :key="curso.id">
+          <tr v-for="curso in filteredCursos" :key="curso.id">
             <td>{{ curso.id }}</td>
             <td>{{ curso.codigo }}</td>
             <td>{{ curso.nombre }}</td>
+            <td>{{ carreraLabel(curso.carrera_id) }}</td>
             <td>{{ curso.semestre }}</td>
             <td>{{ curso.tipo }}</td>
             <td>{{ curso.num_estudiantes ?? '-' }}</td>
@@ -79,6 +104,16 @@
           <div class="form-group">
             <label>Código</label>
             <input v-model="form.codigo" required />
+          </div>
+
+          <div class="form-group">
+            <label>Carrera</label>
+            <select v-model.number="form.carrera_id" required>
+              <option :value="null" disabled>Seleccione una carrera</option>
+              <option v-for="carrera in carreras" :key="carrera.id" :value="carrera.id">
+                {{ carrera.codigo }} - {{ carrera.nombre }}
+              </option>
+            </select>
           </div>
 
           <div class="form-group">
@@ -231,8 +266,11 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { getCarreras } from '../services/carreras/carreras.service'
 import { createCurso, deleteCurso, getCursos, updateCurso } from '../services/cursos/cursos.service'
+import { getDocenteCursos } from '../services/docente-curso/docenteCurso.service'
+import { getDocentes } from '../services/docentes/docentes.service'
 import {
   createLaboratorio,
   getLaboratoriosByCurso,
@@ -240,9 +278,16 @@ import {
 } from '../services/laboratorios/laboratorios.service'
 
 const cursos = ref([])
+const carreras = ref([])
+const docentes = ref([])
+const docenteCursos = ref([])
+
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+
+const cursoFilter = ref('')
+const docenteFilterId = ref('')
 
 const showForm = ref(false)
 const isEditing = ref(false)
@@ -261,6 +306,7 @@ const loadingLaboratoriosCurso = ref(false)
 const initialForm = () => ({
   nombre: '',
   codigo: '',
+  carrera_id: null,
   semestre: 1,
   tipo: 'obligatorio',
   num_estudiantes: null,
@@ -281,6 +327,38 @@ const initialLaboratorioForm = () => ({
 const form = reactive(initialForm())
 const laboratorioForm = reactive(initialLaboratorioForm())
 
+const cursosPorDocente = computed(() => {
+  const map = new Map()
+
+  docenteCursos.value.forEach((item) => {
+    const docenteId = String(item.docente_id)
+    const cursoId = String(item.curso_id)
+
+    if (!map.has(docenteId)) {
+      map.set(docenteId, new Set())
+    }
+
+    map.get(docenteId).add(cursoId)
+  })
+
+  return map
+})
+
+const filteredCursos = computed(() => {
+  const term = cursoFilter.value.trim().toLowerCase()
+  const hasDocenteFilter = Boolean(docenteFilterId.value)
+  const cursosDocente = hasDocenteFilter ? cursosPorDocente.value.get(docenteFilterId.value) : null
+
+  return cursos.value.filter((curso) => {
+    const codigo = String(curso.codigo || '').toLowerCase()
+    const nombre = String(curso.nombre || '').toLowerCase()
+    const matchCurso = !term || codigo.includes(term) || nombre.includes(term)
+    const matchDocente = !hasDocenteFilter || (cursosDocente ? cursosDocente.has(String(curso.id)) : false)
+
+    return matchCurso && matchDocente
+  })
+})
+
 const resetMessages = () => {
   error.value = ''
   success.value = ''
@@ -291,12 +369,53 @@ const loadCursos = async () => {
 
   try {
     const { data } = await getCursos()
-    cursos.value = data
+    cursos.value = Array.isArray(data) ? data : []
   } catch (err) {
     error.value = err?.response?.data?.error || 'Error cargando cursos'
   } finally {
     loading.value = false
   }
+}
+
+const loadAll = async () => {
+  loading.value = true
+  resetMessages()
+
+  try {
+    const [cursosRes, carrerasRes, docentesRes, docenteCursosRes] = await Promise.all([
+      getCursos(),
+      getCarreras(),
+      getDocentes(),
+      getDocenteCursos(),
+    ])
+
+    cursos.value = Array.isArray(cursosRes.data) ? cursosRes.data : []
+    carreras.value = Array.isArray(carrerasRes.data) ? carrerasRes.data : []
+    docentes.value = Array.isArray(docentesRes.data) ? docentesRes.data : []
+    docenteCursos.value = Array.isArray(docenteCursosRes.data) ? docenteCursosRes.data : []
+  } catch (err) {
+    error.value = err?.response?.data?.error || 'Error cargando datos de cursos'
+  } finally {
+    loading.value = false
+  }
+}
+
+const docenteLabel = (docente) => {
+  if (!docente) return '-'
+  const registro = docente.registro_personal ? ` (${docente.registro_personal})` : ''
+  return `${docente.nombre}${registro}`
+}
+
+const carreraLabel = (carreraId) => {
+  if (!carreraId) return '-'
+  const carrera = carreras.value.find((item) => item.id === carreraId)
+  if (!carrera) return `Carrera #${carreraId}`
+  return `${carrera.codigo} - ${carrera.nombre}`
+}
+
+const clearFilters = () => {
+  cursoFilter.value = ''
+  docenteFilterId.value = ''
 }
 
 const openCreate = () => {
@@ -310,6 +429,7 @@ const openEdit = (curso) => {
   actionMenuCursoId.value = null
   form.nombre = curso.nombre
   form.codigo = curso.codigo
+  form.carrera_id = curso.carrera_id
   form.semestre = curso.semestre
   form.tipo = curso.tipo
   form.num_estudiantes = curso.num_estudiantes
@@ -355,15 +475,30 @@ const handleDeleteFromMenu = (cursoId) => {
   removeCurso(cursoId)
 }
 
+const buildCursoPayload = () => ({
+  nombre: form.nombre?.trim(),
+  codigo: form.codigo?.trim(),
+  carrera_id: form.carrera_id,
+  semestre: form.semestre,
+  tipo: form.tipo,
+  num_estudiantes: form.num_estudiantes,
+  puede_manana: form.puede_manana,
+  puede_tarde: form.puede_tarde,
+  tiene_laboratorio: form.tiene_laboratorio,
+  activo: form.activo,
+})
+
 const submitForm = async () => {
   resetMessages()
 
   try {
+    const payload = buildCursoPayload()
+
     if (isEditing.value) {
-      await updateCurso(currentId.value, form)
+      await updateCurso(currentId.value, payload)
       success.value = 'Curso actualizado correctamente'
     } else {
-      await createCurso(form)
+      await createCurso(payload)
       success.value = 'Curso creado correctamente'
     }
 
@@ -476,10 +611,25 @@ const closeLaboratoriosList = () => {
   selectedCurso.value = null
 }
 
-onMounted(loadCursos)
+onMounted(loadAll)
 </script>
 
 <style scoped>
+.filter-card{
+  background:white;
+  border-radius:10px;
+  padding:14px;
+  margin-bottom:16px;
+  box-shadow:0 3px 10px rgba(0,0,0,0.08);
+}
+
+.filter-row{
+  display:flex;
+  gap:12px;
+  align-items:flex-end;
+  flex-wrap:wrap;
+}
+
 .header-row{
   display:flex;
   justify-content:space-between;
@@ -510,6 +660,7 @@ onMounted(loadCursos)
 .table{
   width:100%;
   border-collapse:collapse;
+  min-width:980px;
 }
 
 th, td{
