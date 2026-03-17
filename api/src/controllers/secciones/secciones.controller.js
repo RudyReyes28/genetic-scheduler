@@ -45,10 +45,20 @@ async function remove(req, res, next) {
   }
 }
 
+async function getByCursoId(req, res, next) {
+  try {
+    const data = await seccionesService.getByCursoId(Number(req.params.cursoId));
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getAll,
   getById,
   create,
   update,
   remove,
+  getByCursoId,
 };

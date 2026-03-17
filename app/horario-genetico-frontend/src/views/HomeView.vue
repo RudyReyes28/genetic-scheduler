@@ -14,6 +14,21 @@
       <div class="card">
         <h3>Cursos</h3>
         <p>Gestión de cursos del sistema</p>
+
+        <div class="dropdown">
+          <button class="dropdown-btn" @click="toggleCursosMenu">
+            Ir a vistas de cursos
+          </button>
+
+          <div v-if="showCursosMenu" class="dropdown-menu">
+            <RouterLink to="/cursos" class="dropdown-item" @click="closeCursosMenu">
+              Gestionar Cursos
+            </RouterLink>
+            <RouterLink to="/laboratorios" class="dropdown-item" @click="closeCursosMenu">
+              Gestionar Laboratorios
+            </RouterLink>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -30,6 +45,20 @@
 
   </div>
 </template>
+
+<script setup>
+import { ref } from 'vue'
+
+const showCursosMenu = ref(false)
+
+const toggleCursosMenu = () => {
+  showCursosMenu.value = !showCursosMenu.value
+}
+
+const closeCursosMenu = () => {
+  showCursosMenu.value = false
+}
+</script>
 
 <style scoped>
 
@@ -55,6 +84,39 @@
 
 .card h3{
   margin-bottom:10px;
+}
+
+.dropdown{
+  margin-top:14px;
+  position:relative;
+}
+
+.dropdown-btn{
+  border:none;
+  padding:8px 12px;
+  border-radius:6px;
+  cursor:pointer;
+  background:#2563eb;
+  color:white;
+}
+
+.dropdown-menu{
+  margin-top:8px;
+  border:1px solid #e5e7eb;
+  border-radius:8px;
+  background:white;
+  overflow:hidden;
+}
+
+.dropdown-item{
+  display:block;
+  padding:10px 12px;
+  text-decoration:none;
+  color:#111827;
+}
+
+.dropdown-item:hover{
+  background:#f3f4f6;
 }
 
 </style>

@@ -20,6 +20,13 @@ async function getAll() {
   return rows;
 }
 
+//obtener por id del curso
+async function getByCursoId(cursoId) {
+  const { rows } = await db.query('SELECT * FROM laboratorios WHERE curso_id = $1', [cursoId]);
+  return rows;
+}
+
+
 async function getById(id) {
   const { rows } = await db.query('SELECT * FROM laboratorios WHERE id = $1', [id]);
   if (rows.length === 0) {
@@ -127,4 +134,5 @@ module.exports = {
   create,
   update,
   remove,
+  getByCursoId,
 };

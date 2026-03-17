@@ -69,6 +69,7 @@ create secciccion laboratiro
 async function update(id, payload) {
   try {
     const current = await getById(id);
+    const resolveField = (key, currentValue) => (payload[key] !== undefined ? payload[key] : currentValue);
 
     const nextSeccion = payload.seccion_id ?? current.seccion_id;
     const nextLaboratorio = payload.laboratorio_id ?? current.laboratorio_id;
@@ -92,8 +93,8 @@ async function update(id, payload) {
       [
         nextSeccion,
         nextLaboratorio,
-        payload.salon_fijo_id ? current.salon_fijo_id : null,
-        payload.docente_fijo_id ? current.docente_fijo_id : null,
+        resolveField('salon_fijo_id', current.salon_fijo_id),
+        resolveField('docente_fijo_id', current.docente_fijo_id),
         id,
       ],
     );
