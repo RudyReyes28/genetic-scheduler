@@ -43,3 +43,36 @@ export const importarSalonesCsv = (file) => {
     },
   })
 }
+
+export const importarLaboratoriosCsv = (file) => {
+  const formData = new FormData()
+  formData.append('archivo', file)
+
+  return api.post('/importar/laboratorios', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+}
+
+export const importarSeccionesCsv = (file) => {
+  const formData = new FormData()
+  formData.append('archivo', file)
+
+  return api.post('/importar/secciones', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+}
+
+export const importarSeccionLaboratorioCsv = (file) => {
+  const formData = new FormData()
+  formData.append('archivo', file)
+
+  return api.post('/importar/seccion-laboratorio', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+}

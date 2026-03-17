@@ -519,7 +519,7 @@ const importarLaboratorios = async (fileBuffer) => {
 
     try {
       const cursoResult = await db.query(
-        `SELECT id FROM cursos WHERE codigo = $1`,
+        `SELECT id,nombre FROM cursos WHERE codigo = $1`,
         [codigo_curso]
       );
 
@@ -556,7 +556,7 @@ const importarLaboratorios = async (fileBuffer) => {
         detalles.push({
           fila,
           estado: 'actualizado',
-          motivo: `Laboratorio para curso ${codigo_curso} ya existía`,
+          motivo: `Laboratorio para curso ${cursoResult.rows[0].nombre} ya existía`,
         });
       } else {
         await db.query(
@@ -570,7 +570,7 @@ const importarLaboratorios = async (fileBuffer) => {
         detalles.push({
           fila,
           estado: 'insertado',
-          motivo: `Laboratorio para curso ${codigo_curso} insertado correctamente`,
+          motivo: `Laboratorio para curso ${cursoResult.rows[0].nombre} insertado correctamente`,
         });
       }
     } catch (error) {
@@ -709,6 +709,187 @@ const importarSecciones = async (fileBuffer) => {
   };
 };
 
+const importarSeccionLaboratorio = async (fileBuffer) => {
+  const rows = parseCsvBuffer(fileBuffer);
+
+  let insertados = 0;
+  let actualizados = 0;
+  let omitidos = 0;
+  const detalles = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const fila = i + 2;
+
+    const codigo_curso = row.codigo_curso?.trim();
+    const letra = row.letra?.trim();
+    const salon_nombre = row.salon_nombre?.trim();
+    const registro_personal = row.registro_personal?.trim();
+
+    if (!codigo_curso || !letra) {
+      omitidos++;
+      detalles.push({
+        fila,
+        estado: 'omitido',
+        motivo: 'Faltan columnas requeridas: codigo_curso, letra',
+      });
+      continue;
+    }
+
+    try {
+      // 1) Buscar curso
+      const cursoResult = await db.query(
+        `SELECT id FROM cursos WHERE codigo = $1`,
+        [codigo_curso]
+      );
+
+      if (cursoResult.rows.length === 0) {
+        omitidos++;
+        detalles.push({
+          fila,
+          estado: 'omitido',
+          motivo: `No existe curso con código ${codigo_curso}`,
+        });
+        continue;
+      }
+
+      const curso_id = cursoResult.rows[0].id;
+
+      // 2) Buscar sección por curso_id + letra
+      const seccionResult = await db.query(
+        `SELECT id FROM secciones
+         WHERE curso_id = $1 AND letra = $2`,
+        [curso_id, letra]
+      );
+
+      if (seccionResult.rows.length === 0) {
+        omitidos++;
+        detalles.push({
+          fila,
+          estado: 'omitido',
+          motivo: `No existe la sección ${codigo_curso}-${letra}`,
+        });
+        continue;
+      }
+
+      const seccion_id = seccionResult.rows[0].id;
+
+      // 3) Buscar laboratorio por curso_id
+      const laboratorioResult = await db.query(
+        `SELECT id FROM laboratorios WHERE curso_id = $1`,
+        [curso_id]
+      );
+
+      if (laboratorioResult.rows.length === 0) {
+        omitidos++;
+        detalles.push({
+          fila,
+          estado: 'omitido',
+          motivo: `No existe laboratorio asociado al curso ${codigo_curso}`,
+        });
+        continue;
+      }
+
+      const laboratorio_id = laboratorioResult.rows[0].id;
+
+      // 4) Buscar salón si viene en CSV (opcional)
+      let salon_fijo_id = null;
+      if (salon_nombre) {
+        const salonResult = await db.query(
+          `SELECT id FROM salones WHERE nombre = $1`,
+          [salon_nombre]
+        );
+
+        if (salonResult.rows.length === 0) {
+          omitidos++;
+          detalles.push({
+            fila,
+            estado: 'omitido',
+            motivo: `No existe salón con nombre ${salon_nombre}`,
+          });
+          continue;
+        }
+
+        salon_fijo_id = salonResult.rows[0].id;
+      }
+
+      // 5) Buscar docente si viene en CSV (opcional)
+      let docente_fijo_id = null;
+      if (registro_personal) {
+        const docenteResult = await db.query(
+          `SELECT id FROM docentes WHERE registro_personal = $1`,
+          [registro_personal]
+        );
+
+        if (docenteResult.rows.length === 0) {
+          omitidos++;
+          detalles.push({
+            fila,
+            estado: 'omitido',
+            motivo: `No existe docente con registro ${registro_personal}`,
+          });
+          continue;
+        }
+
+        docente_fijo_id = docenteResult.rows[0].id;
+      }
+
+      // 6) Upsert por seccion_id
+      const existente = await db.query(
+        `SELECT id FROM seccion_laboratorio WHERE seccion_id = $1`,
+        [seccion_id]
+      );
+
+      if (existente.rows.length > 0) {
+        await db.query(
+          `UPDATE seccion_laboratorio
+           SET laboratorio_id = $1,
+               salon_fijo_id = $2,
+               docente_fijo_id = $3
+           WHERE seccion_id = $4`,
+          [laboratorio_id, salon_fijo_id, docente_fijo_id, seccion_id]
+        );
+
+        actualizados++;
+        detalles.push({
+          fila,
+          estado: 'actualizado',
+          motivo: `Sección laboratorio ${codigo_curso}-${letra} ya existía`,
+        });
+      } else {
+        await db.query(
+          `INSERT INTO seccion_laboratorio
+           (seccion_id, laboratorio_id, salon_fijo_id, docente_fijo_id)
+           VALUES ($1, $2, $3, $4)`,
+          [seccion_id, laboratorio_id, salon_fijo_id, docente_fijo_id]
+        );
+
+        insertados++;
+        detalles.push({
+          fila,
+          estado: 'insertado',
+          motivo: `Sección laboratorio ${codigo_curso}-${letra} insertada correctamente`,
+        });
+      }
+    } catch (error) {
+      omitidos++;
+      detalles.push({
+        fila,
+        estado: 'omitido',
+        motivo: error.message,
+      });
+    }
+  }
+
+  return {
+    total_filas: rows.length,
+    insertados,
+    actualizados,
+    omitidos,
+    detalles,
+  };
+};
+
 module.exports = {
   importarDocentes,
   importarCursos,
@@ -716,4 +897,5 @@ module.exports = {
   importarSalones,
   importarLaboratorios,
   importarSecciones,
+  importarSeccionLaboratorio,
 };

@@ -31,6 +31,9 @@
           <option value="cursos">Cursos</option>
           <option value="docente-curso">Relación Docente-Curso</option>
           <option value="salones">Salones</option>
+          <option value="laboratorios">Laboratorios</option>
+          <option value="secciones">Secciones</option>
+          <option value="seccion-laboratorio">Sección Laboratorio</option>
         </select>
       </div>
 
@@ -143,6 +146,12 @@
         </div>
       </div>
     </div>
+
+    <div v-if="resultado || archivoSeleccionado" class="reset-box">
+      <button class="btn-secondary" @click="reiniciarImportacion">
+        Nueva importación
+      </button>
+    </div>
   </div>
 </template>
 
@@ -153,6 +162,9 @@ import {
   importarCursosCsv,
   importarDocenteCursoCsv,
   importarSalonesCsv,
+  importarLaboratoriosCsv,
+  importarSeccionesCsv,
+  importarSeccionLaboratorioCsv,
 } from '../services/importaciones/importaciones.service'
 
 const tipoSeleccionado = ref('')
@@ -179,7 +191,7 @@ Jose Lopez,DOC002,13:00:00,21:00:00`,
     nombreArchivo: 'ejemplo_cursos.csv',
     ejemplo: `nombre,codigo,codigo_carrera,semestre,tipo,num_estudiantes
 Introduccion a la Programacion,IPC1,120058,1,obligatorio,120
-Matemática 1,MATE1,120058,1,obligatorio,130`,
+Matematica 1,MATE1,120058,1,obligatorio,130`,
   },
   'docente-curso': {
     descripcion:
@@ -196,6 +208,32 @@ DOC002,MATE1,no`,
     ejemplo: `nombre,capacidad,es_laboratorio,lab_habilitado_teorico,disponible_manana,disponible_tarde,activo
 Salon A-01,45,no,no,no,no,no
 Laboratorio 2,30,si,si,no,si,si`,
+  },
+  laboratorios: {
+    descripcion:
+      'El archivo debe incluir codigo_curso, nombre, num_periodos, puede_manana, puede_tarde y activo.',
+    nombreArchivo: 'ejemplo_laboratorios.csv',
+    ejemplo: `codigo_curso,nombre,num_periodos,puede_manana,puede_tarde,activo
+3003,Laboratorio de Tecnicas de Estudio,3,no,si,si
+3000,Laboratorio de Area Matematica,2,no,si,si`,
+  },
+  secciones: {
+    descripcion:
+      'El archivo debe incluir codigo_curso, letra, num_estudiantes_seccion y sin_salon.',
+    nombreArchivo: 'ejemplo_secciones.csv',
+    ejemplo: `codigo_curso,letra,num_estudiantes_seccion,sin_salon
+3003,A,22,no
+3000,A,16,no
+3082,A,15,si`,
+  },
+  'seccion-laboratorio': {
+    descripcion:
+      'El archivo debe incluir codigo_curso y letra. Opcionalmente puede incluir salon_nombre y registro_personal.',
+    nombreArchivo: 'ejemplo_seccion_laboratorio.csv',
+    ejemplo: `codigo_curso,letra,salon_nombre,registro_personal
+3003,A,Laboratorio 1,DOC001
+3000,A,Laboratorio 2,DOC002
+3005,B,,DOC003`,
   },
 }
 
@@ -239,6 +277,19 @@ const quitarArchivo = () => {
   archivoSeleccionado.value = null
   selectorBloqueado.value = false
   resultado.value = null
+  resetMessages()
+
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+}
+
+const reiniciarImportacion = () => {
+  tipoSeleccionado.value = ''
+  archivoSeleccionado.value = null
+  resultado.value = null
+  loading.value = false
+  selectorBloqueado.value = false
   resetMessages()
 
   if (fileInput.value) {
@@ -294,6 +345,15 @@ const importarArchivo = async () => {
         break
       case 'salones':
         response = await importarSalonesCsv(archivoSeleccionado.value)
+        break
+      case 'laboratorios':
+        response = await importarLaboratoriosCsv(archivoSeleccionado.value)
+        break
+      case 'secciones':
+        response = await importarSeccionesCsv(archivoSeleccionado.value)
+        break
+      case 'seccion-laboratorio':
+        response = await importarSeccionLaboratorioCsv(archivoSeleccionado.value)
         break
       default:
         throw new Error('Tipo de importación no válido')
@@ -402,7 +462,8 @@ const importarArchivo = async () => {
   margin-bottom: 16px;
 }
 
-.actions {
+.actions,
+.reset-box {
   display: flex;
   justify-content: flex-end;
 }

@@ -104,6 +104,22 @@ const importarSecciones = async (req, res) => {
   }
 };
 
+const importarSeccionLaboratorio = async (req, res) => {
+  if (!validarArchivo(req, res)) return;
+
+  try {
+    const resultado = await importarService.importarSeccionLaboratorio(req.file.buffer);
+
+    res.json({
+      mensaje: 'Importación de secciones de laboratorio completada',
+      ...resultado,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al importar secciones de laboratorio' });
+  }
+};
+
 module.exports = {
   importarDocentes,
   importarCursos,
@@ -111,4 +127,5 @@ module.exports = {
   importarSalones,
   importarLaboratorios,
   importarSecciones,
+  importarSeccionLaboratorio,
 };
