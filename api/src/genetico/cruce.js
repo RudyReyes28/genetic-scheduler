@@ -40,84 +40,62 @@
 
 const { repararIndividuo } = require('./cromosoma');
 
-// Helpers
+// -------------------- HELPERS --------------
 
 /**
- * Copia solo los atributos de asignación de un gen fuente
- * hacia un gen destino, preservando los metadatos del destino.
- *
- * @param {Gen} destino  - gen que recibe la asignación
- * @param {Gen} fuente   - gen del que se toman los valores
- * @returns {Gen}
+ * Copia solo los atributos de asignación del fuente al destino.
+ * Los metadatos de contexto del destino se preservan.
+ * distribucion_lab se copia completo cuando aplica.
  */
 function copiarAsignacion(destino, fuente) {
   return {
-    ...destino,                                  // metadatos propios del destino
-    salon_id:          fuente.salon_id,          // asignación del fuente
+    ...destino,
+    salon_id:          fuente.salon_id,
     docente_id:        fuente.docente_id,
     periodo_inicio_id: fuente.periodo_inicio_id,
     periodo_fin_id:    fuente.periodo_fin_id,
     dia_horario_id:    fuente.dia_horario_id,
+    distribucion_lab:  fuente.distribucion_lab ?? null,
   };
 }
 
-/**
- * Clona un individuo profundamente para no mutar los padres.
- *
- * @param {Individuo} individuo
- * @returns {Individuo}
- */
 function clonarIndividuo(individuo) {
   return {
-    genes:   individuo.genes.map(g => ({ ...g })),
+    genes:   individuo.genes.map(g => ({
+      ...g,
+      distribucion_lab: g.distribucion_lab
+        ? {
+            martes: { ...g.distribucion_lab.martes },
+            jueves: { ...g.distribucion_lab.jueves },
+          }
+        : null,
+    })),
     aptitud: null,
   };
 }
 
-// ------------------- CRUCE DE UN PUNTO -------------------------
+// ----------------------- CRUCE DE UN PUNTO ----------------------------
 
-/**
- * Cruce de un punto.
- * Elige un punto de corte aleatorio y combina los segmentos.
- *
- * @param {Individuo} padreA
- * @param {Individuo} padreB
- * @returns {[Individuo, Individuo]}
- */
 function cruceUnPunto(padreA, padreB) {
   const n     = padreA.genes.length;
-  // Punto de corte entre 1 y n-1 para que ambos segmentos tengan genes
   const punto = Math.floor(Math.random() * (n - 1)) + 1;
 
   const hijo1 = clonarIndividuo(padreA);
   const hijo2 = clonarIndividuo(padreB);
 
-  // Desde el punto de corte, copiar asignaciones del otro padre
   for (let i = punto; i < n; i++) {
     hijo1.genes[i] = copiarAsignacion(hijo1.genes[i], padreB.genes[i]);
     hijo2.genes[i] = copiarAsignacion(hijo2.genes[i], padreA.genes[i]);
   }
 
-  return [
-    repararIndividuo(hijo1),
-    repararIndividuo(hijo2),
-  ];
+  return [repararIndividuo(hijo1), repararIndividuo(hijo2)];
 }
 
-// ------------------- CRUCE MULTIPUNTO (DOS PUNTOS) -------------------
+// -------------------- CRUCE MULTIPUNTO ----------------------------
 
-/**
- * Cruce de dos puntos.
- * Elige dos puntos de corte y el segmento del medio se intercambia.
- *
- * @param {Individuo} padreA
- * @param {Individuo} padreB
- * @returns {[Individuo, Individuo]}
- */
 function cruceMultipunto(padreA, padreB) {
   const n = padreA.genes.length;
 
-  // Generar dos puntos distintos garantizando p1 < p2
   let p1 = Math.floor(Math.random() * (n - 2)) + 1;
   let p2 = Math.floor(Math.random() * (n - 1)) + 1;
   if (p1 === p2) p2 = p2 < n - 1 ? p2 + 1 : p2 - 1;
@@ -126,37 +104,19 @@ function cruceMultipunto(padreA, padreB) {
   const hijo1 = clonarIndividuo(padreA);
   const hijo2 = clonarIndividuo(padreB);
 
-  // Solo el segmento entre p1 y p2 se intercambia
   for (let i = p1; i < p2; i++) {
     hijo1.genes[i] = copiarAsignacion(hijo1.genes[i], padreB.genes[i]);
     hijo2.genes[i] = copiarAsignacion(hijo2.genes[i], padreA.genes[i]);
   }
 
-  return [
-    repararIndividuo(hijo1),
-    repararIndividuo(hijo2),
-  ];
+  return [repararIndividuo(hijo1), repararIndividuo(hijo2)];
 }
 
-// ------------------- FUNCION UNIFICADA -------------------
+// ------------------- FUNCION UNIFICADA --------------
 
-/**
- * Cruza dos padres usando el método configurado.
- *
- * @param {Individuo} padreA
- * @param {Individuo} padreB
- * @param {string}    metodo  - 'un_punto' | 'multipunto'
- * @returns {[Individuo, Individuo]}
- */
 function cruzar(padreA, padreB, metodo = 'un_punto') {
-  if (metodo === 'multipunto') {
-    return cruceMultipunto(padreA, padreB);
-  }
+  if (metodo === 'multipunto') return cruceMultipunto(padreA, padreB);
   return cruceUnPunto(padreA, padreB);
 }
 
-module.exports = {
-  cruceUnPunto,
-  cruceMultipunto,
-  cruzar,
-};
+module.exports = { cruceUnPunto, cruceMultipunto, cruzar };

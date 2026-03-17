@@ -196,3 +196,7 @@ CREATE TABLE horario_historial (
   conflictos    INT     NOT NULL
 );
  CREATE INDEX idx_historial_horario ON horario_historial(horario_id);
+
+
+ALTER TABLE horario_detalle
+ADD COLUMN dia_especifico VARCHAR(20);
