@@ -18,6 +18,8 @@ const algoritmoRoutes = require('./algoritmo/algoritmo.routes');
 
 const horariosRoutes = require('./horarios/horarios.routes');
 
+const resetRoutes = require('./reset/reset.routes');
+
 
 const router = express.Router();
 
@@ -38,4 +40,7 @@ router.use('/importar', importarRoutes);
 
 router.use('/algoritmo', algoritmoRoutes);
 router.use('/horarios', horariosRoutes);
+
+
+router.use('/reset', resetRoutes);
 module.exports = router;
