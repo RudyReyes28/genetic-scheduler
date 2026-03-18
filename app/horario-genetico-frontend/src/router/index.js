@@ -16,6 +16,7 @@ import ReportesView from '../views/ReportesView.vue'
 import AcercaDeView from '../views/AcercaDeView.vue'
 import CarrerasView from '../views/CarrerasView.vue'
 import ImportacionesView from '../views/ImportacionesView.vue'
+import MantenimientoView from '../views/MantenimientoView.vue'
 
 const routes = [
   {
@@ -91,6 +92,7 @@ const routes = [
     component: AcercaDeView,
   },
   { path: '/importaciones', name: 'importaciones', component: ImportacionesView },
+  { path: '/mantenimiento', name: 'mantenimiento', component: MantenimientoView },
 ]
 
 const router = createRouter({

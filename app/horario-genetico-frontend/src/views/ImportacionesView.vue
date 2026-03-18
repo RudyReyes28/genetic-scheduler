@@ -17,146 +17,275 @@
       {{ success }}
     </div>
 
-    <div class="import-card">
-      <div class="form-group">
-        <label for="tipoImportacion">Tipo de importación</label>
-        <select
-          id="tipoImportacion"
-          v-model="tipoSeleccionado"
-          :disabled="selectorBloqueado || loading"
-          class="select"
-        >
-          <option value="">Seleccione una opción</option>
-          <option value="docentes">Docentes</option>
-          <option value="cursos">Cursos</option>
-          <option value="docente-curso">Relación Docente-Curso</option>
-          <option value="salones">Salones</option>
-          <option value="laboratorios">Laboratorios</option>
-          <option value="secciones">Secciones</option>
-          <option value="seccion-laboratorio">Sección Laboratorio</option>
-        </select>
-      </div>
-
-      <div v-if="tipoSeleccionado" class="example-box">
-        <div class="example-header">
-          <div>
-            <h3>Formato esperado</h3>
-            <p>{{ selectedConfig.descripcion }}</p>
-          </div>
-
-          <button class="btn-secondary" @click="descargarEjemplo">
-            Descargar ejemplo CSV
-          </button>
-        </div>
-
-        <pre class="csv-preview">{{ selectedConfig.ejemplo }}</pre>
-      </div>
-
-      <div v-if="tipoSeleccionado" class="upload-box">
-        <div class="form-group">
-          <label for="archivoCsv">Archivo CSV</label>
-          <input
-            id="archivoCsv"
-            ref="fileInput"
-            type="file"
-            accept=".csv,text/csv"
-            @change="handleFileChange"
-            :disabled="loading"
-            class="file-input"
-          />
-        </div>
-
-        <div v-if="archivoSeleccionado" class="file-info">
-          <span><strong>Archivo:</strong> {{ archivoSeleccionado.name }}</span>
-          <button class="btn-danger-outline" @click="quitarArchivo" :disabled="loading">
-            Quitar archivo
-          </button>
-        </div>
-
-        <div class="actions">
-          <button
-            class="btn"
-            @click="importarArchivo"
-            :disabled="!tipoSeleccionado || !archivoSeleccionado || loading"
-          >
-            {{ loading ? 'Importando...' : 'Importar' }}
-          </button>
-        </div>
-      </div>
+    <div class="tabs">
+      <button
+        class="tab-btn"
+        :class="{ active: activeTab === 'individual' }"
+        @click="activeTab = 'individual'"
+      >
+        Importación individual
+      </button>
+      <button
+        class="tab-btn"
+        :class="{ active: activeTab === 'masiva' }"
+        @click="activeTab = 'masiva'"
+      >
+        Carga masiva (todos juntos)
+      </button>
     </div>
 
-    <div v-if="resultado" class="results-card">
-      <h2>Resultado de la importación</h2>
-
-      <div class="summary-grid">
-        <div class="summary-item">
-          <span class="summary-label">Total de filas</span>
-          <span class="summary-value">{{ resultado.total_filas ?? 0 }}</span>
+    <template v-if="activeTab === 'individual'">
+      <div class="import-card">
+        <div class="form-group">
+          <label for="tipoImportacion">Tipo de importación</label>
+          <select
+            id="tipoImportacion"
+            v-model="tipoSeleccionado"
+            :disabled="selectorBloqueado || loading"
+            class="select"
+          >
+            <option value="">Seleccione una opción</option>
+            <option v-for="item in tiposImportacion" :key="item.value" :value="item.value">
+              {{ item.label }}
+            </option>
+          </select>
         </div>
 
-        <div class="summary-item green">
-          <span class="summary-label">Insertados</span>
-          <span class="summary-value">{{ resultado.insertados ?? 0 }}</span>
+        <div v-if="tipoSeleccionado" class="example-box">
+          <div class="example-header">
+            <div>
+              <h3>Formato esperado</h3>
+              <p>{{ selectedConfig.descripcion }}</p>
+            </div>
+
+            <button class="btn-secondary" @click="descargarEjemplo">
+              Descargar ejemplo CSV
+            </button>
+          </div>
+
+          <pre class="csv-preview">{{ selectedConfig.ejemplo }}</pre>
         </div>
 
-        <div class="summary-item blue">
-          <span class="summary-label">Actualizados</span>
-          <span class="summary-value">{{ resultado.actualizados ?? 0 }}</span>
-        </div>
+        <div v-if="tipoSeleccionado" class="upload-box">
+          <div class="form-group">
+            <label for="archivoCsv">Archivo CSV</label>
+            <input
+              id="archivoCsv"
+              ref="fileInput"
+              type="file"
+              accept=".csv,text/csv"
+              @change="handleFileChange"
+              :disabled="loading"
+              class="file-input"
+            />
+          </div>
 
-        <div class="summary-item red">
-          <span class="summary-label">Omitidos</span>
-          <span class="summary-value">{{ resultado.omitidos ?? 0 }}</span>
+          <div v-if="archivoSeleccionado" class="file-info">
+            <span><strong>Archivo:</strong> {{ archivoSeleccionado.name }}</span>
+            <button class="btn-danger-outline" @click="quitarArchivo" :disabled="loading">
+              Quitar archivo
+            </button>
+          </div>
+
+          <div class="actions">
+            <button
+              class="btn"
+              @click="importarArchivo"
+              :disabled="!tipoSeleccionado || !archivoSeleccionado || loading"
+            >
+              {{ loading ? 'Importando...' : 'Importar' }}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div v-if="resultado.detalles?.length" class="details-section">
-        <h3>Detalle por fila</h3>
+      <div v-if="resultado" class="results-card">
+        <h2>Resultado de la importación</h2>
+
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="summary-label">Total de filas</span>
+            <span class="summary-value">{{ resultado.total_filas ?? 0 }}</span>
+          </div>
+
+          <div class="summary-item green">
+            <span class="summary-label">Insertados</span>
+            <span class="summary-value">{{ resultado.insertados ?? 0 }}</span>
+          </div>
+
+          <div class="summary-item blue">
+            <span class="summary-label">Actualizados</span>
+            <span class="summary-value">{{ resultado.actualizados ?? 0 }}</span>
+          </div>
+
+          <div class="summary-item red">
+            <span class="summary-label">Omitidos</span>
+            <span class="summary-value">{{ resultado.omitidos ?? 0 }}</span>
+          </div>
+        </div>
+
+        <div v-if="resultado.detalles?.length" class="details-section">
+          <h3>Detalle por fila</h3>
+
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Fila</th>
+                  <th>Estado</th>
+                  <th>Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(detalle, index) in resultado.detalles" :key="index">
+                  <td>{{ detalle.fila }}</td>
+                  <td>
+                    <span
+                      :class="[
+                        'badge',
+                        detalle.estado === 'insertado'
+                          ? 'badge-insertado'
+                          : detalle.estado === 'actualizado'
+                          ? 'badge-actualizado'
+                          : 'badge-omitido'
+                      ]"
+                    >
+                      {{ detalle.estado }}
+                    </span>
+                  </td>
+                  <td>{{ detalle.motivo }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="resultado || archivoSeleccionado" class="reset-box">
+        <button class="btn-secondary" @click="reiniciarImportacion">
+          Nueva importación
+        </button>
+      </div>
+    </template>
+
+    <template v-else>
+      <div class="import-card">
+        <h2 class="section-title">Carga masiva de archivos</h2>
+        <p class="section-subtitle">
+          Selecciona uno o más archivos CSV y se importarán en secuencia.
+        </p>
+
+        <div class="bulk-grid">
+          <div v-for="item in tiposImportacion" :key="item.value" class="bulk-item">
+            <div class="bulk-item-head">
+              <div>
+                <h3>{{ item.label }}</h3>
+                <p>{{ ejemplos[item.value].descripcion }}</p>
+              </div>
+
+              <button class="btn-secondary" @click="descargarEjemploPorTipo(item.value)">
+                Descargar ejemplo
+              </button>
+            </div>
+
+            <div class="form-group no-margin">
+              <label :for="`archivoMasivo-${item.value}`">Archivo CSV de {{ item.label }}</label>
+              <input
+                :id="`archivoMasivo-${item.value}`"
+                type="file"
+                accept=".csv,text/csv"
+                class="file-input"
+                :disabled="loadingMasivo"
+                :ref="(el) => setMassFileInputRef(item.value, el)"
+                @change="handleMassFileChange(item.value, $event)"
+              />
+            </div>
+
+            <div v-if="archivosMasivos[item.value]" class="file-info compact">
+              <span><strong>Archivo:</strong> {{ archivosMasivos[item.value].name }}</span>
+              <button
+                class="btn-danger-outline"
+                :disabled="loadingMasivo"
+                @click="quitarArchivoMasivo(item.value)"
+              >
+                Quitar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions dual-actions">
+          <button class="btn-secondary" @click="reiniciarCargaMasiva" :disabled="loadingMasivo">
+            Limpiar selección
+          </button>
+          <button class="btn" @click="importarTodo" :disabled="loadingMasivo || totalArchivosMasivos === 0">
+            {{ loadingMasivo ? 'Importando...' : 'Importar archivos seleccionados' }}
+          </button>
+        </div>
+      </div>
+
+      <div v-if="resultadoMasivo.length" class="results-card">
+        <h2>Resultado de carga masiva</h2>
+
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="summary-label">Archivos procesados</span>
+            <span class="summary-value">{{ resumenMasivo.procesados }}</span>
+          </div>
+
+          <div class="summary-item green">
+            <span class="summary-label">Insertados</span>
+            <span class="summary-value">{{ resumenMasivo.insertados }}</span>
+          </div>
+
+          <div class="summary-item blue">
+            <span class="summary-label">Actualizados</span>
+            <span class="summary-value">{{ resumenMasivo.actualizados }}</span>
+          </div>
+
+          <div class="summary-item red">
+            <span class="summary-label">Omitidos</span>
+            <span class="summary-value">{{ resumenMasivo.omitidos }}</span>
+          </div>
+        </div>
 
         <div class="table-wrapper">
           <table class="table">
             <thead>
               <tr>
-                <th>Fila</th>
+                <th>Tipo</th>
+                <th>Archivo</th>
                 <th>Estado</th>
-                <th>Motivo</th>
+                <th>Insertados</th>
+                <th>Actualizados</th>
+                <th>Omitidos</th>
+                <th>Mensaje</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(detalle, index) in resultado.detalles" :key="index">
-                <td>{{ detalle.fila }}</td>
+              <tr v-for="(item, index) in resultadoMasivo" :key="index">
+                <td>{{ item.tipoLabel }}</td>
+                <td>{{ item.archivo }}</td>
                 <td>
-                  <span
-                    :class="[
-                      'badge',
-                      detalle.estado === 'insertado'
-                        ? 'badge-insertado'
-                        : detalle.estado === 'actualizado'
-                        ? 'badge-actualizado'
-                        : 'badge-omitido'
-                    ]"
-                  >
-                    {{ detalle.estado }}
+                  <span :class="['badge', item.estado === 'error' ? 'badge-omitido' : 'badge-insertado']">
+                    {{ item.estado === 'error' ? 'error' : 'ok' }}
                   </span>
                 </td>
-                <td>{{ detalle.motivo }}</td>
+                <td>{{ item.insertados }}</td>
+                <td>{{ item.actualizados }}</td>
+                <td>{{ item.omitidos }}</td>
+                <td>{{ item.mensaje }}</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-    </div>
-
-    <div v-if="resultado || archivoSeleccionado" class="reset-box">
-      <button class="btn-secondary" @click="reiniciarImportacion">
-        Nueva importación
-      </button>
-    </div>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import {
   importarDocentesCsv,
   importarCursosCsv,
@@ -170,11 +299,37 @@ import {
 const tipoSeleccionado = ref('')
 const archivoSeleccionado = ref(null)
 const resultado = ref(null)
+const activeTab = ref('individual')
+
 const loading = ref(false)
+const loadingMasivo = ref(false)
 const error = ref('')
 const success = ref('')
 const selectorBloqueado = ref(false)
+
 const fileInput = ref(null)
+const massFileInputs = ref({})
+const resultadoMasivo = ref([])
+
+const tiposImportacion = [
+  { value: 'docentes', label: 'Docentes' },
+  { value: 'cursos', label: 'Cursos' },
+  { value: 'docente-curso', label: 'Relación Docente-Curso' },
+  { value: 'salones', label: 'Salones' },
+  { value: 'laboratorios', label: 'Laboratorios' },
+  { value: 'secciones', label: 'Secciones' },
+  { value: 'seccion-laboratorio', label: 'Sección Laboratorio' },
+]
+
+const archivosMasivos = reactive({
+  docentes: null,
+  cursos: null,
+  'docente-curso': null,
+  salones: null,
+  laboratorios: null,
+  secciones: null,
+  'seccion-laboratorio': null,
+})
 
 const ejemplos = {
   docentes: {
@@ -241,6 +396,63 @@ const selectedConfig = computed(() => {
   return tipoSeleccionado.value ? ejemplos[tipoSeleccionado.value] : null
 })
 
+const totalArchivosMasivos = computed(() => {
+  return tiposImportacion.reduce((count, item) => {
+    return count + (archivosMasivos[item.value] ? 1 : 0)
+  }, 0)
+})
+
+const resumenMasivo = computed(() => {
+  return resultadoMasivo.value.reduce(
+    (acc, item) => {
+      acc.procesados += 1
+      acc.insertados += item.insertados || 0
+      acc.actualizados += item.actualizados || 0
+      acc.omitidos += item.omitidos || 0
+      return acc
+    },
+    {
+      procesados: 0,
+      insertados: 0,
+      actualizados: 0,
+      omitidos: 0,
+    }
+  )
+})
+
+const getImporterByTipo = (tipo) => {
+  switch (tipo) {
+    case 'docentes':
+      return importarDocentesCsv
+    case 'cursos':
+      return importarCursosCsv
+    case 'docente-curso':
+      return importarDocenteCursoCsv
+    case 'salones':
+      return importarSalonesCsv
+    case 'laboratorios':
+      return importarLaboratoriosCsv
+    case 'secciones':
+      return importarSeccionesCsv
+    case 'seccion-laboratorio':
+      return importarSeccionLaboratorioCsv
+    default:
+      return null
+  }
+}
+
+const isCsvFile = (file) => {
+  if (!file) return false
+  const nombre = file.name?.toLowerCase() || ''
+  return nombre.endsWith('.csv') || file.type === 'text/csv'
+}
+
+const setMassFileInputRef = (tipo, el) => {
+  if (el) {
+    massFileInputs.value[tipo] = el
+  }
+}
+
 const resetMessages = () => {
   error.value = ''
   success.value = ''
@@ -258,10 +470,7 @@ const handleFileChange = (event) => {
     return
   }
 
-  const nombre = file.name.toLowerCase()
-  const esCsv = nombre.endsWith('.csv') || file.type === 'text/csv'
-
-  if (!esCsv) {
+  if (!isCsvFile(file)) {
     archivoSeleccionado.value = null
     selectorBloqueado.value = false
     error.value = 'El archivo seleccionado no es válido. Debe ser un archivo CSV.'
@@ -297,21 +506,74 @@ const reiniciarImportacion = () => {
   }
 }
 
-const descargarEjemplo = () => {
-  if (!selectedConfig.value) return
+const handleMassFileChange = (tipo, event) => {
+  resetMessages()
+  resultadoMasivo.value = []
 
-  const blob = new Blob([selectedConfig.value.ejemplo], {
+  const file = event.target.files?.[0]
+
+  if (!file) {
+    archivosMasivos[tipo] = null
+    return
+  }
+
+  if (!isCsvFile(file)) {
+    archivosMasivos[tipo] = null
+    error.value = `El archivo para ${tipo} no es válido. Debe ser CSV.`
+    if (massFileInputs.value[tipo]) {
+      massFileInputs.value[tipo].value = ''
+    }
+    return
+  }
+
+  archivosMasivos[tipo] = file
+}
+
+const quitarArchivoMasivo = (tipo) => {
+  archivosMasivos[tipo] = null
+  resultadoMasivo.value = []
+  resetMessages()
+
+  if (massFileInputs.value[tipo]) {
+    massFileInputs.value[tipo].value = ''
+  }
+}
+
+const reiniciarCargaMasiva = () => {
+  resetMessages()
+  resultadoMasivo.value = []
+
+  tiposImportacion.forEach((item) => {
+    archivosMasivos[item.value] = null
+    if (massFileInputs.value[item.value]) {
+      massFileInputs.value[item.value].value = ''
+    }
+  })
+}
+
+const descargarCsvDesdeConfig = (config) => {
+  if (!config) return
+
+  const blob = new Blob([config.ejemplo], {
     type: 'text/csv;charset=utf-8;',
   })
 
   const url = window.URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.setAttribute('download', selectedConfig.value.nombreArchivo)
+  link.setAttribute('download', config.nombreArchivo)
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
   window.URL.revokeObjectURL(url)
+}
+
+const descargarEjemplo = () => {
+  descargarCsvDesdeConfig(selectedConfig.value)
+}
+
+const descargarEjemploPorTipo = (tipo) => {
+  descargarCsvDesdeConfig(ejemplos[tipo])
 }
 
 const importarArchivo = async () => {
@@ -331,33 +593,10 @@ const importarArchivo = async () => {
   loading.value = true
 
   try {
-    let response
+    const importer = getImporterByTipo(tipoSeleccionado.value)
+    if (!importer) throw new Error('Tipo de importación no válido')
 
-    switch (tipoSeleccionado.value) {
-      case 'docentes':
-        response = await importarDocentesCsv(archivoSeleccionado.value)
-        break
-      case 'cursos':
-        response = await importarCursosCsv(archivoSeleccionado.value)
-        break
-      case 'docente-curso':
-        response = await importarDocenteCursoCsv(archivoSeleccionado.value)
-        break
-      case 'salones':
-        response = await importarSalonesCsv(archivoSeleccionado.value)
-        break
-      case 'laboratorios':
-        response = await importarLaboratoriosCsv(archivoSeleccionado.value)
-        break
-      case 'secciones':
-        response = await importarSeccionesCsv(archivoSeleccionado.value)
-        break
-      case 'seccion-laboratorio':
-        response = await importarSeccionLaboratorioCsv(archivoSeleccionado.value)
-        break
-      default:
-        throw new Error('Tipo de importación no válido')
-    }
+    const response = await importer(archivoSeleccionado.value)
 
     resultado.value = response.data
     success.value = response.data?.mensaje || 'Importación realizada correctamente'
@@ -367,6 +606,62 @@ const importarArchivo = async () => {
       'Ocurrió un error al importar el archivo. Verifica el formato e inténtalo de nuevo.'
   } finally {
     loading.value = false
+  }
+}
+
+const importarTodo = async () => {
+  resetMessages()
+  resultadoMasivo.value = []
+
+  if (totalArchivosMasivos.value === 0) {
+    error.value = 'Selecciona al menos un archivo CSV para la carga masiva.'
+    return
+  }
+
+  loadingMasivo.value = true
+
+  try {
+    for (const item of tiposImportacion) {
+      const file = archivosMasivos[item.value]
+      if (!file) continue
+
+      const importer = getImporterByTipo(item.value)
+      if (!importer) continue
+
+      try {
+        const response = await importer(file)
+        const data = response?.data || {}
+
+        resultadoMasivo.value.push({
+          tipoLabel: item.label,
+          archivo: file.name,
+          estado: 'ok',
+          insertados: data.insertados ?? 0,
+          actualizados: data.actualizados ?? 0,
+          omitidos: data.omitidos ?? 0,
+          mensaje: data.mensaje || 'Importación completada',
+        })
+      } catch (err) {
+        resultadoMasivo.value.push({
+          tipoLabel: item.label,
+          archivo: file.name,
+          estado: 'error',
+          insertados: 0,
+          actualizados: 0,
+          omitidos: 0,
+          mensaje:
+            err?.response?.data?.error ||
+            'Error al importar. Verifica el formato del archivo.',
+        })
+      }
+    }
+
+    const conError = resultadoMasivo.value.some((item) => item.estado === 'error')
+    success.value = conError
+      ? 'Carga masiva finalizada con algunos errores.'
+      : 'Carga masiva completada correctamente.'
+  } finally {
+    loadingMasivo.value = false
   }
 }
 </script>
@@ -389,11 +684,46 @@ const importarArchivo = async () => {
   margin-bottom: 20px;
 }
 
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.tab-btn {
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #374151;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.tab-btn.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.section-title {
+  margin: 0 0 8px 0;
+}
+
+.section-subtitle {
+  margin: 0 0 18px 0;
+  color: #4b5563;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-bottom: 18px;
+}
+
+.no-margin {
+  margin-bottom: 0;
 }
 
 .form-group label {
@@ -449,6 +779,38 @@ const importarArchivo = async () => {
   margin-top: 10px;
 }
 
+.bulk-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.bulk-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px;
+  background: #f9fafb;
+}
+
+.bulk-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.bulk-item-head h3 {
+  margin: 0 0 6px 0;
+  font-size: 16px;
+}
+
+.bulk-item-head p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 14px;
+}
+
 .file-info {
   display: flex;
   justify-content: space-between;
@@ -462,10 +824,20 @@ const importarArchivo = async () => {
   margin-bottom: 16px;
 }
 
+.file-info.compact {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
 .actions,
 .reset-box {
   display: flex;
   justify-content: flex-end;
+}
+
+.dual-actions {
+  gap: 10px;
+  margin-top: 18px;
 }
 
 .btn {
@@ -623,6 +995,9 @@ th {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .tabs,
+  .dual-actions,
+  .bulk-item-head,
   .example-header,
   .file-info {
     flex-direction: column;

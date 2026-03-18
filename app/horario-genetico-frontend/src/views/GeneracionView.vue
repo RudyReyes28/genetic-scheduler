@@ -281,7 +281,7 @@
                 <td>{{ detalle.seccion_letra || '-' }}</td>
                 <td>{{ detalle.docente_nombre || '-' }}</td>
                 <td>{{ detalle.salon_nombre || '-' }}</td>
-                <td>{{ detalle.dias_nombre || '-' }}</td>
+                <td>{{ detalle.dia_display || '-' }}</td>
                 <td>{{ detalle.hora_inicio }}</td>
                 <td>{{ detalle.hora_fin }}</td>
                 <td>{{ detalle.es_laboratorio ? 'Laboratorio' : 'Curso' }}</td>
@@ -507,6 +507,10 @@ const resetMessages = () => {
   success.value = ''
 }
 
+const isTimeoutError = (err) => {
+  return err?.code === 'ECONNABORTED' || String(err?.message || '').toLowerCase().includes('timeout')
+}
+
 const buildChart = async () => {
   await nextTick()
   if (!chartCanvas.value) return
@@ -599,6 +603,10 @@ const consultarEstado = async (silent = false) => {
     estado.value = data
     running.value = Boolean(data.corriendo)
 
+    if (data.corriendo && !pollingId.value) {
+      startPolling()
+    }
+
     if (data.generacion && data.mejorAptitud !== null) {
       const exists = livePoints.value.some((p) => p.generacion === data.generacion)
       if (!exists) {
@@ -651,6 +659,7 @@ const handleEjecutar = async () => {
 
   try {
     running.value = true
+    startPolling()
     const payload = { ...ejecucionForm }
     const { data } = await ejecutarAlgoritmo(payload)
 
@@ -670,11 +679,20 @@ const handleEjecutar = async () => {
       await loadHorarios()
       activeTab.value = 'horarios'
     }
-  } catch (err) {
-    error.value = err?.response?.data?.error || 'Error ejecutando el algoritmo'
-    startPolling()
-  } finally {
+
     running.value = false
+    stopPolling()
+  } catch (err) {
+    if (isTimeoutError(err)) {
+      success.value = 'Ejecución iniciada. El proceso sigue corriendo en segundo plano; actualizando estado...'
+      running.value = true
+      startPolling()
+      return
+    }
+
+    error.value = err?.response?.data?.error || 'Error ejecutando el algoritmo'
+    running.value = false
+    stopPolling()
   }
 }
 

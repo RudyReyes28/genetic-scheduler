@@ -37,12 +37,28 @@
         </div>
       </div>
 
-      <RouterLink to="/docentes">Docentes</RouterLink>
-      <RouterLink to="/carreras">Carreras</RouterLink>
-      <RouterLink to="/salones">Salones</RouterLink>
+      <div class="dropdown">
+        <button class="dropdown-btn" @click="togglePersonalMenu">
+          Personal ▾
+        </button>
+
+        <div v-if="showPersonalMenu" class="dropdown-menu">
+          <RouterLink to="/docentes" class="dropdown-item" @click="closePersonalMenu">
+            Docentes
+          </RouterLink>
+          <RouterLink to="/carreras" class="dropdown-item" @click="closePersonalMenu">
+            Carreras
+          </RouterLink>
+          <RouterLink to="/salones" class="dropdown-item" @click="closePersonalMenu">
+            Salones
+          </RouterLink>
+        </div>
+      </div>
+
       <RouterLink to="/generacion">Generación</RouterLink>
       <RouterLink to="/configuracion-agente">Config. Agente</RouterLink>
       <RouterLink to="/importaciones">Importaciones</RouterLink>
+      <RouterLink to="/mantenimiento">Mantenimiento</RouterLink>
       <RouterLink to="/reportes">Reportes</RouterLink>
       <RouterLink to="/acerca-de">Acerca de</RouterLink>
     </div>
@@ -53,6 +69,7 @@
 import { ref } from 'vue'
 
 const showCursosMenu = ref(false)
+const showPersonalMenu = ref(false)
 
 const toggleCursosMenu = () => {
   showCursosMenu.value = !showCursosMenu.value
@@ -60,6 +77,14 @@ const toggleCursosMenu = () => {
 
 const closeCursosMenu = () => {
   showCursosMenu.value = false
+}
+
+const togglePersonalMenu = () => {
+  showPersonalMenu.value = !showPersonalMenu.value
+}
+
+const closePersonalMenu = () => {
+  showPersonalMenu.value = false
 }
 </script>
 
