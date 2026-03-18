@@ -154,49 +154,51 @@
           <button class="btn-secondary" @click="loadHorarios">Recargar</button>
         </div>
 
-        <table class="table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Fecha</th>
-              <th>Aptitud</th>
-              <th>Generaciones</th>
-              <th>Tiempo</th>
-              <th>Activo</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Fecha</th>
+                <th>Aptitud</th>
+                <th>Generaciones</th>
+                <th>Tiempo</th>
+                <th>Activo</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
 
-          <tbody>
-            <tr v-if="loadingHorarios">
-              <td colspan="8" class="empty">Cargando horarios...</td>
-            </tr>
+            <tbody>
+              <tr v-if="loadingHorarios">
+                <td colspan="8" class="empty">Cargando horarios...</td>
+              </tr>
 
-            <tr v-else-if="horarios.length === 0">
-              <td colspan="8" class="empty">No hay horarios generados.</td>
-            </tr>
+              <tr v-else-if="horarios.length === 0">
+                <td colspan="8" class="empty">No hay horarios generados.</td>
+              </tr>
 
-            <tr v-for="horario in horarios" :key="horario.id">
-              <td>{{ horario.id }}</td>
-              <td>{{ horario.nombre }}</td>
-              <td>{{ formatDate(horario.fecha_generacion) }}</td>
-              <td>{{ horario.aptitud_final }}</td>
-              <td>{{ horario.generaciones_ejecutadas }}</td>
-              <td>{{ horario.tiempo_ejecucion_ms }} ms</td>
-              <td>
-                <span :class="horario.es_activo ? 'badge active' : 'badge inactive'">
-                  {{ horario.es_activo ? 'Sí' : 'No' }}
-                </span>
-              </td>
-              <td class="actions">
-                <button class="btn-small view" @click="selectHorario(horario)">Ver</button>
-                <button class="btn-small success" @click="handleActivarHorario(horario.id)">Activar</button>
-                <button class="btn-small danger" @click="handleDeleteHorario(horario.id)">Eliminar</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              <tr v-for="horario in horarios" :key="horario.id">
+                <td>{{ horario.id }}</td>
+                <td>{{ horario.nombre }}</td>
+                <td>{{ formatDate(horario.fecha_generacion) }}</td>
+                <td>{{ horario.aptitud_final }}</td>
+                <td>{{ horario.generaciones_ejecutadas }}</td>
+                <td>{{ horario.tiempo_ejecucion_ms }} ms</td>
+                <td>
+                  <span :class="horario.es_activo ? 'badge active' : 'badge inactive'">
+                    {{ horario.es_activo ? 'Sí' : 'No' }}
+                  </span>
+                </td>
+                <td class="actions">
+                  <button class="btn-small view" @click="selectHorario(horario)">Ver</button>
+                  <button class="btn-small success" @click="handleActivarHorario(horario.id)">Activar</button>
+                  <button class="btn-small danger" @click="handleDeleteHorario(horario.id)">Eliminar</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- DETALLE -->
@@ -243,54 +245,54 @@
             <button class="btn-secondary" @click="handleReporte">Ver reporte</button>
           </div>
         </div>
-<div class="table-wrapper">
-  <table class="table details-table">
-          <thead>
-            <tr>
-              <th>Curso</th>
-              <th>Semestre</th>
-              <th>Código</th>
-              <th>Sección</th>
-              <th>Docente</th>
-              <th>Salón</th>
-              <th>Días</th>
-              <th>Hora Inicio</th>
-              <th>Hora Fin</th>
-              <th>Tipo</th>
-              <th>Manual</th>
-              <th>Acción</th>
-            </tr>
-          </thead>
 
-          <tbody>
-            <tr v-if="loadingSelectedHorario">
-              <td colspan="11" class="empty">Cargando detalle...</td>
-            </tr>
+        <div class="table-wrapper">
+          <table class="table details-table">
+            <thead>
+              <tr>
+                <th>Curso</th>
+                <th>Semestre</th>
+                <th>Código</th>
+                <th>Sección</th>
+                <th>Docente</th>
+                <th>Salón</th>
+                <th>Días</th>
+                <th>Hora Inicio</th>
+                <th>Hora Fin</th>
+                <th>Tipo</th>
+                <th>Manual</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
 
-            <tr v-else-if="horarioDetalles.length === 0">
-              <td colspan="11" class="empty">No hay detalles para este horario.</td>
-            </tr>
+            <tbody>
+              <tr v-if="loadingSelectedHorario">
+                <td colspan="12" class="empty">Cargando detalle...</td>
+              </tr>
 
-            <tr v-for="detalle in horarioDetalles" :key="detalle.detalle_id">
-              <td>{{ detalle.curso_nombre }}</td>
-              <td>{{ detalle.curso_nombre }}</td>
-              <td>{{ detalle.curso_codigo }}</td>
-              <td>{{ detalle.seccion_letra || '-' }}</td>
-              <td>{{ detalle.docente_nombre || '-' }}</td>
-              <td>{{ detalle.salon_nombre || '-' }}</td>
-              <td>{{ detalle.dias_nombre || '-' }}</td>
-              <td>{{ detalle.hora_inicio }}</td>
-              <td>{{ detalle.hora_fin }}</td>
-              <td>{{ detalle.es_laboratorio ? 'Laboratorio' : 'Curso' }}</td>
-              <td>{{ detalle.modificado_manual ? 'Sí' : 'No' }}</td>
-              <td>
-                <button class="btn-small edit" @click="openEditDetalle(detalle)">Editar</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-</div>
-        
+              <tr v-else-if="horarioDetalles.length === 0">
+                <td colspan="12" class="empty">No hay detalles para este horario.</td>
+              </tr>
+
+              <tr v-for="detalle in horarioDetalles" :key="detalle.detalle_id">
+                <td>{{ detalle.curso_nombre }}</td>
+                <td>{{ detalle.semestre }}</td>
+                <td>{{ detalle.curso_codigo }}</td>
+                <td>{{ detalle.seccion_letra || '-' }}</td>
+                <td>{{ detalle.docente_nombre || '-' }}</td>
+                <td>{{ detalle.salon_nombre || '-' }}</td>
+                <td>{{ detalle.dias_nombre || '-' }}</td>
+                <td>{{ detalle.hora_inicio }}</td>
+                <td>{{ detalle.hora_fin }}</td>
+                <td>{{ detalle.es_laboratorio ? 'Laboratorio' : 'Curso' }}</td>
+                <td>{{ detalle.modificado_manual ? 'Sí' : 'No' }}</td>
+                <td>
+                  <button class="btn-small edit" @click="openEditDetalle(detalle)">Editar</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -1081,10 +1083,15 @@ onBeforeUnmount(() => {
   height: 360px;
 }
 
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 980px;
+  min-width: 1200px;
 }
 
 th,
@@ -1100,6 +1107,7 @@ th {
 
 .details-table {
   margin-top: 16px;
+  min-width: 1150px;
 }
 
 .actions {
@@ -1223,6 +1231,13 @@ th {
   margin-bottom: 16px;
 }
 
+.page {
+  width: 110%;
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 20px 30px;
+}
+
 @media (max-width: 1100px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1251,5 +1266,7 @@ th {
     flex-direction: column;
     align-items: stretch;
   }
+
 }
 </style>
+
