@@ -91,6 +91,17 @@ async function obtener(id, filtros = {}) {
 // ----------- CONFLICTOS --------------
  
 async function getConflictos(id) {
+  const { rows: [horario] } = await db.query(
+    `SELECT id, aptitud_final FROM horarios WHERE id = $1`,
+    [id]
+  );
+
+  if (!horario) {
+    const err = new Error('Horario no encontrado');
+    err.status = 404;
+    throw err;
+  }
+
   const individuo = await reconstruirIndividuo(id);
   if (!individuo) {
     const err = new Error('Horario no encontrado');
@@ -100,7 +111,8 @@ async function getConflictos(id) {
   const ctx = await cargarContexto();
   const { aptitud, detalle } = evaluarAptitud(individuo, ctx, true);
   return {
-    aptitud,
+    aptitud: Number(horario.aptitud_final),
+    aptitud_recalculada: aptitud,
     total_conflictos:   detalle.filter(d => d.penalizacion).length,
     total_penalizacion: detalle.filter(d => d.penalizacion).reduce((s, d) => s + d.penalizacion, 0),
     total_bonos:        detalle.filter(d => d.bono).reduce((s, d) => s + d.bono, 0),
@@ -145,7 +157,8 @@ async function getReporte(id) {
     metodo_seleccion:        horario.metodo_seleccion,
     metodo_cruce:            horario.metodo_cruce,
     metodo_mutacion:         horario.metodo_mutacion,
-    aptitud_final:           aptitud,
+    aptitud_final:           Number(horario.aptitud_final),
+    aptitud_recalculada:     aptitud,
     generaciones_ejecutadas: horario.generaciones_ejecutadas,
     tiempo_ejecucion_ms:     horario.tiempo_ejecucion_ms,
     tiempo_ejecucion_seg:    (horario.tiempo_ejecucion_ms / 1000).toFixed(2),
