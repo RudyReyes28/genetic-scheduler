@@ -29,6 +29,16 @@
           </select>
         </div>
 
+        <div class="form-group">
+          <label>Filtrar por carrera</label>
+          <select v-model="carreraFilterId">
+            <option value="">Todas las carreras</option>
+            <option v-for="carrera in carreras" :key="carrera.id" :value="String(carrera.id)">
+              {{ carrera.codigo }} - {{ carrera.nombre }}
+            </option>
+          </select>
+        </div>
+
         <button class="btn-secondary" @click="clearFilters">Limpiar</button>
       </div>
     </div>
@@ -319,6 +329,7 @@ const success = ref('')
 
 const cursoFilter = ref('')
 const docenteFilterId = ref('')
+const carreraFilterId = ref('')
 
 const showForm = ref(false)
 const isEditing = ref(false)
@@ -378,6 +389,7 @@ const cursosPorDocente = computed(() => {
 const filteredCursos = computed(() => {
   const term = cursoFilter.value.trim().toLowerCase()
   const hasDocenteFilter = Boolean(docenteFilterId.value)
+  const hasCarreraFilter = Boolean(carreraFilterId.value)
   const cursosDocente = hasDocenteFilter ? cursosPorDocente.value.get(docenteFilterId.value) : null
 
   return cursos.value.filter((curso) => {
@@ -385,8 +397,9 @@ const filteredCursos = computed(() => {
     const nombre = String(curso.nombre || '').toLowerCase()
     const matchCurso = !term || codigo.includes(term) || nombre.includes(term)
     const matchDocente = !hasDocenteFilter || (cursosDocente ? cursosDocente.has(String(curso.id)) : false)
+    const matchCarrera = !hasCarreraFilter || String(curso.carrera_id) === carreraFilterId.value
 
-    return matchCurso && matchDocente
+    return matchCurso && matchDocente && matchCarrera
   })
 })
 
@@ -447,6 +460,7 @@ const carreraLabel = (carreraId) => {
 const clearFilters = () => {
   cursoFilter.value = ''
   docenteFilterId.value = ''
+  carreraFilterId.value = ''
 }
 
 const openCreate = () => {
