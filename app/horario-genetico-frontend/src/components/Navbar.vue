@@ -56,6 +56,7 @@
       </div>
 
       <RouterLink to="/generacion">Generación</RouterLink>
+      <RouterLink to="/horario-tablas">Horario Tablas</RouterLink>
       <RouterLink to="/configuracion-agente">Config. Agente</RouterLink>
       <RouterLink to="/importaciones">Importaciones</RouterLink>
       <RouterLink to="/mantenimiento">Mantenimiento</RouterLink>

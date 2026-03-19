@@ -17,6 +17,7 @@ import AcercaDeView from '../views/AcercaDeView.vue'
 import CarrerasView from '../views/CarrerasView.vue'
 import ImportacionesView from '../views/ImportacionesView.vue'
 import MantenimientoView from '../views/MantenimientoView.vue'
+import HorarioTablasView from '../views/HorarioTablasView.vue'
 
 const routes = [
   {
@@ -93,6 +94,7 @@ const routes = [
   },
   { path: '/importaciones', name: 'importaciones', component: ImportacionesView },
   { path: '/mantenimiento', name: 'mantenimiento', component: MantenimientoView },
+  { path: '/horario-tablas', name: 'horarioTablas', component: HorarioTablasView },
 ]
 
 const router = createRouter({
