@@ -52,7 +52,7 @@ function calcularPeriodoFin(ctx, periodo_inicio_id, num_periodos) {
   return fin ? fin.id : periodo_inicio_id;
 }
  
-// ── Distribución de laboratorio ───────────────────────────────
+// ----------------- DISTRIBUCIÓN DE LABORATORIOS ----------------
  
 /**
  * Genera o recalcula la distribucion_lab de un gen de laboratorio.
@@ -97,7 +97,7 @@ function generarDistribucionLab(lab, ctx, docente_id) {
   };
 }
  
-// ── Generación de genes ───────────────────────────────────────
+// ------------------ GENERACIÓN DE INDIVIDUOS ----------------
  
 function generarGenSeccion(seccion, ctx) {
   const dia_horario_id = seccion.dia_horario_fijo_id ?? 1;
@@ -105,7 +105,14 @@ function generarGenSeccion(seccion, ctx) {
   let docente_id = seccion.docente_fijo_id;
   if (!docente_id) {
     const posibles = ctx.docentesCurso[seccion.curso_id] ?? [];
-    docente_id = elegirAlAzar(posibles);
+
+    if (posibles.length > 0) {
+      // Hay relación docente-curso definida - respetar estrictamente
+      docente_id = elegirAlAzar(posibles);
+    } else {
+      // No hay relación definida - cualquier docente activo
+      docente_id = elegirAlAzar(ctx.docentes.map(d => d.id));
+    }
   }
  
   let periodo_inicio_id = seccion.periodo_fijo_inicio_id;
@@ -155,9 +162,16 @@ function generarGenLab(lab, ctx) {
  
   let docente_id = lab.docente_fijo_id;
   if (!docente_id) {
-    const posibles = ctx.docentesCursoLab[lab.curso_id] ?? [];
-    const fallback  = ctx.docentesCurso[lab.curso_id]    ?? [];
-    docente_id = elegirAlAzar(posibles.length > 0 ? posibles : fallback);
+    const posiblesLab = ctx.docentesCursoLab[lab.curso_id] ?? [];
+    const posibles    = ctx.docentesCurso[lab.curso_id]    ?? [];
+
+    if (posiblesLab.length > 0) {
+      docente_id = elegirAlAzar(posiblesLab);
+    } else if (posibles.length > 0) {
+      docente_id = elegirAlAzar(posibles);
+    } else {
+      docente_id = elegirAlAzar(ctx.docentes.map(d => d.id));
+    }
   }
  
   const distribucion_lab = generarDistribucionLab(lab, ctx, docente_id);
