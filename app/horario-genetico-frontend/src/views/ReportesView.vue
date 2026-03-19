@@ -383,6 +383,159 @@
           <div><strong>Total bonos:</strong> {{ conflictosData.total_bonos }}</div>
         </div>
 
+        <div class="subcard conflict-guide">
+          <h3 class="tab-section-title">Qué es un slot</h3>
+          <p class="guide-text">
+            Un slot identifica un momento específico en el horario. Se forma combinando tres datos:
+          </p>
+          <div class="guide-code">docente_id — dia_id — periodo_id</div>
+          <p class="guide-text">Ejemplo: 54-2-38 = docente 54, martes, periodo 38 (17:50)</p>
+          <div class="guide-code">salon_id — dia_id — periodo_id</div>
+          <p class="guide-text">Ejemplo: 3-1-12 = salón 3, lunes/mié/vie, periodo 12 (17:00)</p>
+          <div class="guide-code">semestre — carrera_id — dia_id — periodo_id</div>
+          <p class="guide-text">Ejemplo: 3-1-1-9 = semestre 3, carrera 1, lunes, periodo 9 (14:30)</p>
+        </div>
+
+        <div class="subcard conflict-guide">
+          <h3 class="tab-section-title">Conflictos — penalizaciones</h3>
+
+          <div class="guide-item negative">
+            <div class="guide-badge">-100 pts</div>
+            <div class="guide-content">
+              <h4>Conflicto de docente</h4>
+              <p>
+                El mismo docente está asignado a dos cursos o laboratorios al mismo tiempo. Un docente
+                solo puede estar en un lugar a la vez.
+              </p>
+              <div class="guide-code">
+                Slot 54-2-38: docente 54 aparece en 2 asignaciones el martes al mismo periodo
+              </div>
+            </div>
+          </div>
+
+          <div class="guide-item negative">
+            <div class="guide-badge">-100 pts</div>
+            <div class="guide-content">
+              <h4>Conflicto de salón</h4>
+              <p>
+                El mismo salón tiene dos cursos asignados en el mismo horario. Un salón solo puede tener
+                un curso a la vez.
+              </p>
+              <div class="guide-code">
+                Slot 3-1-12: salón 3 tiene 2 asignaciones el lunes al mismo periodo
+              </div>
+            </div>
+          </div>
+
+          <div class="guide-item negative">
+            <div class="guide-badge">-80 pts</div>
+            <div class="guide-content">
+              <h4>Conflicto de semestre</h4>
+              <p>
+                Dos cursos obligatorios del mismo semestre y carrera coinciden en el mismo horario. Los
+                estudiantes de ese semestre no podrían asistir a ambos. Solo aplica a cursos obligatorios;
+                los optativos pueden traslaparse.
+              </p>
+              <div class="guide-code">
+                Slot 3-1-1-9: semestre 3, carrera 1 tiene 2 cursos obligatorios el lunes periodo 9
+              </div>
+            </div>
+          </div>
+
+          <div class="guide-item negative">
+            <div class="guide-badge">-90 pts</div>
+            <div class="guide-content">
+              <h4>Docente no autorizado</h4>
+              <p>
+                El docente asignado al curso no aparece en la relación docente-curso de ese curso. Solo se
+                penaliza si hay al menos un docente registrado para ese curso; si no hay ninguno definido,
+                cualquier docente es válido.
+              </p>
+              <div class="guide-code">Docente 12 no está autorizado para el curso IA1 (código 2826)</div>
+            </div>
+          </div>
+
+          <div class="guide-item negative">
+            <div class="guide-badge">-70 pts</div>
+            <div class="guide-content">
+              <h4>Horario incorrecto</h4>
+              <p>
+                El curso fue asignado en una jornada que no le corresponde. Por ejemplo, un curso marcado
+                como "solo tarde" quedó en un periodo de la mañana, o viceversa.
+              </p>
+              <div class="guide-code">Curso 3234 asignado en mañana pero puede_manana = false</div>
+            </div>
+          </div>
+
+          <div class="guide-item negative">
+            <div class="guide-badge">-60 pts</div>
+            <div class="guide-content">
+              <h4>Salón inadecuado</h4>
+              <p>
+                Hay dos casos posibles: un curso teórico fue asignado a un salón de laboratorio que no está
+                habilitado para clases teóricas, o un laboratorio fue asignado a un salón que no es de
+                laboratorio.
+              </p>
+              <div class="guide-code">
+                Curso teórico 2804 en Laboratorio de Física (no habilitado para teóricos)
+              </div>
+            </div>
+          </div>
+
+          <div class="guide-item negative">
+            <div class="guide-badge">-50 pts</div>
+            <div class="guide-content">
+              <h4>Docente fuera de horario</h4>
+              <p>
+                El periodo asignado cae fuera del rango de contratación del docente. Por ejemplo, un
+                docente contratado de 17:00 a 21:10 fue asignado a las 14:30.
+              </p>
+              <div class="guide-code">
+                Docente Carlos Lam asignado a las 14:30 pero su contrato inicia a las 17:00
+              </div>
+            </div>
+          </div>
+
+          <div class="guide-item negative">
+            <div class="guide-badge">-20 pts</div>
+            <div class="guide-content">
+              <h4>Capacidad superada</h4>
+              <p>
+                El número de estudiantes del curso supera la capacidad del salón asignado. Es una
+                penalización leve (soft constraint): el algoritmo puede dejar el curso ahí si no hay mejor
+                opción, pero intentará mejorar esta asignación.
+              </p>
+              <div class="guide-code">130 estudiantes en salón con capacidad 60</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="subcard conflict-guide">
+          <h3 class="tab-section-title">Bonos — optimizaciones</h3>
+
+          <div class="guide-item positive">
+            <div class="guide-badge">+30 pts</div>
+            <div class="guide-content">
+              <h4>Continuidad de semestre</h4>
+              <p>
+                Dos cursos del mismo semestre quedaron en periodos consecutivos el mismo día. Esto facilita
+                que los estudiantes asistan sin huecos en su horario.
+              </p>
+            </div>
+          </div>
+
+          <div class="guide-item positive">
+            <div class="guide-badge">+10 pts</div>
+            <div class="guide-content">
+              <h4>Capacidad adecuada</h4>
+              <p>
+                El salón asignado tiene capacidad suficiente para el número de estudiantes del curso. El
+                algoritmo premia asignar salones más grandes a los cursos con más estudiantes.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <h3 class="subsection-title">Listado de conflictos</h3>
         <div class="two-columns">
           <div class="subcard">
@@ -1938,6 +2091,75 @@ th {
   color: #b91c1c;
   border: 1px solid #fca5a5;
   font-weight: 500;
+}
+
+.conflict-guide {
+  margin-bottom: 14px;
+}
+
+.guide-text {
+  margin: 8px 0;
+  color: #374151;
+}
+
+.guide-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 13px;
+  background: #f3f4f6;
+  color: #374151;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 6px 0;
+  white-space: pre-wrap;
+}
+
+.guide-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.guide-badge {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  height: fit-content;
+}
+
+.guide-content h4 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.guide-content p {
+  margin: 0 0 8px;
+  color: #374151;
+}
+
+.guide-item.negative {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.guide-item.negative .guide-badge {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.guide-item.positive {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.guide-item.positive .guide-badge {
+  background: #dcfce7;
+  color: #166534;
 }
 
 

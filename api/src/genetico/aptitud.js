@@ -236,6 +236,35 @@ function penalizarCapacidadSuperada(genes, ctx, detalle) {
   return puntaje;
 }
 
+/**
+ * P8 — Docente no autorizado para el curso
+ * Penaliza cuando el docente asignado no está en docente_curso
+ * para ese curso específico, siempre que haya al menos un docente
+ * registrado para ese curso.
+ */
+function penalizarDocenteNoAutorizado(genes, ctx, detalle) {
+  let puntaje = 0;
+  for (const gen of genes) {
+    if (!gen.docente_id || !gen.curso_id) continue;
+
+    // Obtener los docentes válidos para este curso
+    const posibles = gen.es_laboratorio
+      ? (ctx.docentesCursoLab[gen.curso_id] ?? ctx.docentesCurso[gen.curso_id] ?? [])
+      : (ctx.docentesCurso[gen.curso_id] ?? []);
+
+    // Solo penalizar si HAY docentes definidos y el asignado no es uno de ellos
+    if (posibles.length > 0 && !posibles.includes(gen.docente_id)) {
+      puntaje -= 90;
+      if (detalle) detalle.push({
+        tipo: 'docente_no_autorizado',
+        descripcion: `Docente ${gen.docente_id} no está autorizado para curso ${gen.curso_id}`,
+        penalizacion: -90,
+      });
+    }
+  }
+  return puntaje;
+}
+
 // ----------------- BONOS -----------------
 
 function bonoContinuidadSemestre(genes, detalle) {
@@ -304,6 +333,7 @@ function evaluarAptitud(individuo, ctx, conDetalle = false) {
     penalizarSalonInadecuado(genes, ctx, detalle)      +
     penalizarDocenteFueraDeHorario(genes, ctx, detalle)+
     penalizarCapacidadSuperada(genes, ctx, detalle)    +
+    penalizarDocenteNoAutorizado(genes, ctx, detalle)  +
     bonoContinuidadSemestre(genes, detalle)            +
     bonoCapacidadAdecuada(genes, ctx, detalle);
 

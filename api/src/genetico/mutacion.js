@@ -82,19 +82,26 @@ function mutacionReisercion(individuo, tasa, ctx) {
   for (let i = 0; i < individuo.genes.length; i++) {
     if (Math.random() >= tasa) continue;
  
-    const gen         = individuo.genes[i];
+    const gen = individuo.genes[i];
     const numPeriodos = gen.es_laboratorio ? 3 : 1;
- 
+
     // 1. Nuevo docente
     if (!gen.docente_fijo_id) {
-      const posibles   = gen.es_laboratorio
-        ? (ctx.docentesCursoLab[gen.curso_id] ?? ctx.docentesCurso[gen.curso_id] ?? [])
-        : (ctx.docentesCurso[gen.curso_id]    ?? []);
-      const candidatos = posibles.length > 0 ? posibles : ctx.docentes.map(d => d.id);
-      const nuevo      = elegirAlAzar(candidatos);
+      const posiblesLab = gen.es_laboratorio
+        ? (ctx.docentesCursoLab[gen.curso_id] ?? []) : [];
+      const posibles = gen.es_laboratorio
+        ? (posiblesLab.length > 0 ? posiblesLab : ctx.docentesCurso[gen.curso_id] ?? [])
+        : (ctx.docentesCurso[gen.curso_id] ?? []);
+
+      // Respetar relación si existe, si no usar cualquier docente
+      const candidatos = posibles.length > 0
+        ? posibles
+        : ctx.docentes.map(d => d.id);
+
+      const nuevo = elegirAlAzar(candidatos);
       if (nuevo) gen.docente_id = nuevo;
     }
- 
+
     // 2. Nuevo periodo y distribucion_lab
     if (!gen.periodo_fijo_inicio_id) {
       if (gen.es_laboratorio) {
