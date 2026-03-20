@@ -81,7 +81,7 @@ function intercambiarAsignacion(genes, i, j) {
 function mutacionReisercion(individuo, tasa, ctx) {
   for (let i = 0; i < individuo.genes.length; i++) {
     if (Math.random() >= tasa) continue;
- 
+
     const gen = individuo.genes[i];
     const numPeriodos = gen.es_laboratorio ? 3 : 1;
 
@@ -108,21 +108,21 @@ function mutacionReisercion(individuo, tasa, ctx) {
         // Recalcular distribución completa para el lab
         const metadataLab = {
           puede_manana: gen.puede_manana,
-          puede_tarde:  gen.puede_tarde,
-          curso_id:     gen.curso_id,
+          puede_tarde: gen.puede_tarde,
+          curso_id: gen.curso_id,
         };
         gen.distribucion_lab = generarDistribucionLab(metadataLab, ctx, gen.docente_id);
- 
+
         gen.periodo_inicio_id =
           gen.distribucion_lab.martes.periodo_inicio_id ??
           gen.distribucion_lab.jueves.periodo_inicio_id ??
           gen.periodo_inicio_id;
- 
+
         gen.periodo_fin_id =
           gen.distribucion_lab.jueves.periodo_fin_id ??
           gen.distribucion_lab.martes.periodo_fin_id ??
           gen.periodo_fin_id;
- 
+
       } else {
         const validos = periodosValidos(
           ctx, gen.puede_manana, gen.puede_tarde, gen.docente_id, numPeriodos
@@ -130,27 +130,40 @@ function mutacionReisercion(individuo, tasa, ctx) {
         const nuevo = elegirAlAzar(validos);
         if (nuevo) {
           gen.periodo_inicio_id = nuevo.id;
-          gen.periodo_fin_id    = calcularPeriodoFin(ctx, nuevo.id, numPeriodos);
+          gen.periodo_fin_id = calcularPeriodoFin(ctx, nuevo.id, numPeriodos);
         }
       }
     }
- 
+
     // 3. Nuevo salón
     if (!gen.salon_fijo_id && !gen.sin_salon) {
       const validos = salonesValidos(ctx, gen.es_laboratorio, gen.periodo_inicio_id);
-      const nuevo   = elegirAlAzar(validos);
+
+      // Filtrar salones ya usados en este slot por otros genes del individuo
+      const salonesOcupados = new Set(
+        individuo.genes
+          .filter(g => g !== gen &&
+            g.salon_id &&
+            g.dia_horario_id === gen.dia_horario_id &&
+            g.periodo_inicio_id === gen.periodo_inicio_id)
+          .map(g => g.salon_id)
+      );
+
+      const validosLibres = validos.filter(s => !salonesOcupados.has(s.id));
+      const pool = validosLibres.length > 0 ? validosLibres : validos;
+      const nuevo = elegirAlAzar(pool);
       if (nuevo) gen.salon_id = nuevo.id;
     }
- 
+
     // 4. Día (fijo por tipo: LMV para cursos, MarJue para labs)
     if (!gen.dia_horario_fijo_id) {
       gen.dia_horario_id = gen.es_laboratorio ? 2 : 1;
     }
   }
- 
+
   return repararIndividuo(individuo);
 }
- 
+
 // ------------------- FUNCION UNIFICADA --------------
 
 function mutar(individuo, metodo = 'intercambio', tasa = 0.05, ctx = null) {
