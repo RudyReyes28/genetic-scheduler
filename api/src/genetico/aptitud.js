@@ -113,18 +113,19 @@ function penalizarConflictosSalon(slotSalon, detalle) {
   let puntaje = 0;
   for (const [key, genes] of Object.entries(slotSalon)) {
     if (genes.length > 1) {
-      const conflictos = genes.length - 1;
-      puntaje -= conflictos * 100;
+      // Penalización progresiva: 1 extra = -100, 2 extra = -250, 3 extra = -450
+      const exceso = genes.length - 1;
+      const penalizacion = exceso * 100 + (exceso - 1) * 50;
+      puntaje -= penalizacion;
       if (detalle) detalle.push({
         tipo: 'conflicto_salon',
         descripcion: `Salón ${genes[0].salon_id} tiene ${genes.length} asignaciones en slot ${key}`,
-        penalizacion: conflictos * -100,
+        penalizacion: -penalizacion,
       });
     }
   }
   return puntaje;
 }
-
 function penalizarConflictosSemestre(slotSemestre, detalle) {
   let puntaje = 0;
   for (const [key, genes] of Object.entries(slotSemestre)) {
@@ -265,6 +266,34 @@ function penalizarDocenteNoAutorizado(genes, ctx, detalle) {
   return puntaje;
 }
 
+function penalizarSobreusoPeriodo(genes, detalle) {
+  let puntaje = 0;
+
+  // Contar cuántos cursos teóricos hay por periodo+dia
+  const conteo = {};
+  for (const gen of genes) {
+    if (gen.sin_salon || gen.es_laboratorio) continue;
+    const key = `${gen.dia_horario_id}-${gen.periodo_inicio_id}`;
+    conteo[key] = (conteo[key] ?? 0) + 1;
+  }
+
+  // Penalizar si hay más cursos que salones disponibles en un periodo
+  const maxSalones = 22; // total de salones teóricos disponibles
+  for (const [key, cantidad] of Object.entries(conteo)) {
+    if (cantidad > maxSalones) {
+      const exceso = cantidad - maxSalones;
+      puntaje -= exceso * 80;
+      if (detalle) detalle.push({
+        tipo: 'sobreuso_periodo',
+        descripcion: `Slot ${key} tiene ${cantidad} cursos para ${maxSalones} salones`,
+        penalizacion: exceso * -80,
+      });
+    }
+  }
+
+  return puntaje;
+}
+
 // ----------------- BONOS -----------------
 
 function bonoContinuidadSemestre(genes, detalle) {
@@ -334,6 +363,7 @@ function evaluarAptitud(individuo, ctx, conDetalle = false) {
     penalizarDocenteFueraDeHorario(genes, ctx, detalle)+
     penalizarCapacidadSuperada(genes, ctx, detalle)    +
     penalizarDocenteNoAutorizado(genes, ctx, detalle)  +
+    penalizarSobreusoPeriodo(genes, detalle)            +
     bonoContinuidadSemestre(genes, detalle)            +
     bonoCapacidadAdecuada(genes, ctx, detalle);
 

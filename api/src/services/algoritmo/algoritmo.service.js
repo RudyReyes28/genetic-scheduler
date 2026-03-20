@@ -6,6 +6,7 @@
 const db                              = require('../../db');
 const { cargarContexto }              = require('../../genetico/contexto');
 const { ejecutarAG, guardarHorario }  = require('../../genetico/algoritmo');
+const { broadcast }                   = require('../../realtime/algoritmo.ws');
 
 // Estado global de la ejecución actual
 let estadoEjecucion = {
@@ -35,42 +36,67 @@ async function ejecutar(body) {
     error:        null,
   };
 
-  const ctx = await cargarContexto();
+  broadcast({ type: 'estado', payload: estadoEjecucion });
 
-  // Aplicar overrides del body sobre la configuración de BD
-  const camposOverride = [
-    'tamano_poblacion', 'max_generaciones', 'metodo_seleccion',
-    'metodo_cruce', 'metodo_mutacion', 'tasa_mutacion', 'aptitud_objetivo',
-  ];
-  for (const campo of camposOverride) {
-    if (body?.[campo] !== undefined) ctx.config[campo] = body[campo];
+  try {
+    const ctx = await cargarContexto();
+
+    // Aplicar overrides del body sobre la configuración de BD
+    const camposOverride = [
+      'tamano_poblacion', 'max_generaciones', 'metodo_seleccion',
+      'metodo_cruce', 'metodo_mutacion', 'tasa_mutacion', 'aptitud_objetivo',
+    ];
+    for (const campo of camposOverride) {
+      if (body?.[campo] !== undefined) ctx.config[campo] = body[campo];
+    }
+
+    const nombre = body?.nombre ?? `Horario ${new Date().toLocaleString('es-GT')}`;
+
+    const onProgreso = ({ generacion, mejorAptitud, conflictos }) => {
+      estadoEjecucion.generacion = generacion;
+      estadoEjecucion.mejorAptitud = mejorAptitud;
+      estadoEjecucion.conflictos = conflictos;
+
+      broadcast({
+        type: 'progreso',
+        payload: {
+          generacion,
+          mejorAptitud,
+          conflictos,
+        },
+      });
+    };
+
+    const { mejorIndividuo, historial, stats } = await ejecutarAG(ctx, onProgreso);
+
+    const horarioId = await guardarHorario(mejorIndividuo, stats, nombre);
+    estadoEjecucion.horarioId = horarioId;
+
+    await guardarHistorial(horarioId, historial);
+
+    estadoEjecucion.corriendo = false;
+    estadoEjecucion.error = null;
+
+    broadcast({ type: 'estado', payload: estadoEjecucion });
+    broadcast({ type: 'finalizado', payload: { horarioId, stats } });
+
+    return {
+      horario_id: horarioId,
+      stats,
+      historial_resumen: {
+        primera_generacion: historial[0],
+        ultima_generacion: historial[historial.length - 1],
+      },
+    };
+  } catch (error) {
+    estadoEjecucion.corriendo = false;
+    estadoEjecucion.error = error.message || 'Error ejecutando el algoritmo';
+
+    broadcast({ type: 'estado', payload: estadoEjecucion });
+    broadcast({ type: 'error', payload: { message: estadoEjecucion.error } });
+
+    throw error;
   }
-
-  const nombre = body?.nombre ?? `Horario ${new Date().toLocaleString('es-GT')}`;
-
-  const onProgreso = ({ generacion, mejorAptitud, conflictos }) => {
-    estadoEjecucion.generacion   = generacion;
-    estadoEjecucion.mejorAptitud = mejorAptitud;
-    estadoEjecucion.conflictos   = conflictos;
-  };
-
-  const { mejorIndividuo, historial, stats } = await ejecutarAG(ctx, onProgreso);
-
-  const horarioId = await guardarHorario(mejorIndividuo, stats, nombre);
-  estadoEjecucion.horarioId = horarioId;
-
-  await guardarHistorial(horarioId, historial);
-
-  estadoEjecucion.corriendo = false;
-
-  return {
-    horario_id: horarioId,
-    stats,
-    historial_resumen: {
-      primera_generacion: historial[0],
-      ultima_generacion:  historial[historial.length - 1],
-    },
-  };
 }
 
 // --------- ESTADO DE EJECUCIÓN ----------------

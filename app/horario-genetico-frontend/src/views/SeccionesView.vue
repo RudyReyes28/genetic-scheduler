@@ -16,15 +16,31 @@
       <div class="filter-row">
         <div class="form-group">
           <label>Filtrar listado por curso</label>
-          <select v-model="cursoFilterId" @change="onCursoFilterChange">
-            <option value="">Todos los cursos</option>
-            <option v-for="curso in cursos" :key="curso.id" :value="String(curso.id)">
-              {{ curso.codigo }} - {{ curso.nombre }}
-            </option>
-          </select>
+          <input
+            v-model="searchCursoFilter"
+            placeholder="Escribe nombre o código del curso..."
+            @input="onSearchCursoFilter"
+            class="search-input"
+          />
+          <div v-if="showCursoSuggestions && filteredCursosForFilter.length > 0" class="suggestions">
+            <div
+              v-for="curso in filteredCursosForFilter"
+              :key="curso.id"
+              class="suggestion-item"
+              @click="selectCursoFilter(curso)"
+            >
+              <strong>{{ curso.codigo }}</strong> - {{ curso.nombre }}
+            </div>
+          </div>
+          <div v-if="showCursoSuggestions && searchCursoFilter && filteredCursosForFilter.length === 0" class="suggestions">
+            <div class="suggestion-item disabled">Sin resultados</div>
+          </div>
         </div>
 
         <button class="btn-secondary" @click="clearCursoFilter">Limpiar filtro</button>
+      </div>
+      <div v-if="cursoFilterId" class="selected-filter">
+        <span>Filtrado por: <strong>{{ selectedCursoName }}</strong></span>
       </div>
     </div>
 
@@ -235,6 +251,8 @@ const isEditing = ref(false)
 const currentId = ref(null)
 
 const cursoFilterId = ref('')
+const searchCursoFilter = ref('')
+const showCursoSuggestions = ref(false)
 
 const searchCursos = ref('')
 const searchSalones = ref('')
@@ -335,6 +353,23 @@ const filteredDiasHorario = computed(() => {
   return diasHorario.value.filter((item) => String(item.nombre || '').toLowerCase().includes(term))
 })
 
+const filteredCursosForFilter = computed(() => {
+  const term = searchCursoFilter.value.trim().toLowerCase()
+  if (!term) return cursos.value
+
+  return cursos.value.filter((item) => {
+    const codigo = String(item.codigo || '').toLowerCase()
+    const nombre = String(item.nombre || '').toLowerCase()
+    return codigo.includes(term) || nombre.includes(term)
+  })
+})
+
+const selectedCursoName = computed(() => {
+  if (!cursoFilterId.value) return ''
+  const curso = cursos.value.find((item) => String(item.id) === cursoFilterId.value)
+  return curso ? `${curso.codigo} - ${curso.nombre}` : ''
+})
+
 const resetMessages = () => {
   error.value = ''
   success.value = ''
@@ -423,12 +458,25 @@ const loadAll = async () => {
   }
 }
 
-const onCursoFilterChange = async () => {
+const onSearchCursoFilter = () => {
+  showCursoSuggestions.value = true
+}
+
+const selectCursoFilter = async (curso) => {
+  cursoFilterId.value = String(curso.id)
+  searchCursoFilter.value = `${curso.codigo} - ${curso.nombre}`
+  showCursoSuggestions.value = false
   await loadSecciones()
 }
 
 const clearCursoFilter = async () => {
   cursoFilterId.value = ''
+  searchCursoFilter.value = ''
+  showCursoSuggestions.value = false
+  await loadSecciones()
+}
+
+const onCursoFilterChange = async () => {
   await loadSecciones()
 }
 
@@ -543,6 +591,74 @@ onMounted(loadAll)
   align-items:flex-end;
 }
 
+.form-group{
+  flex: 1;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  position: relative;
+}
+
+.form-group-full{
+  grid-column:1 / -1;
+}
+
+.search-input{
+  padding:8px 10px;
+  border:1px solid #d1d5db;
+  border-radius:6px;
+  font-size: 14px;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.suggestions{
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.suggestion-item{
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  transition: background-color 200ms;
+}
+
+.suggestion-item:hover:not(.disabled){
+  background-color: #f3f4f6;
+}
+
+.suggestion-item.disabled{
+  cursor: default;
+  color: #9ca3af;
+  background-color: #f9fafb;
+}
+
+.selected-filter{
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: #dbeafe;
+  border-left: 4px solid #2563eb;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #1e40af;
+}
+
 .card{
   background:white;
   border-radius:10px;
@@ -627,16 +743,6 @@ th{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:15px;
-}
-
-.form-group{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-.form-group-full{
-  grid-column:1 / -1;
 }
 
 .form-group input,

@@ -99,9 +99,9 @@ function generarDistribucionLab(lab, ctx, docente_id) {
  
 // ------------------ GENERACIÓN DE INDIVIDUOS ----------------
  
-function generarGenSeccion(seccion, ctx) {
+function generarGenSeccion(seccion, ctx, genesYaAsignados = []) {
   const dia_horario_id = seccion.dia_horario_fijo_id ?? 1;
- 
+
   let docente_id = seccion.docente_fijo_id;
   if (!docente_id) {
     const posibles = ctx.docentesCurso[seccion.curso_id] ?? [];
@@ -114,7 +114,7 @@ function generarGenSeccion(seccion, ctx) {
       docente_id = elegirAlAzar(ctx.docentes.map(d => d.id));
     }
   }
- 
+
   let periodo_inicio_id = seccion.periodo_fijo_inicio_id;
   if (!periodo_inicio_id) {
     const validos = periodosValidos(
@@ -122,38 +122,49 @@ function generarGenSeccion(seccion, ctx) {
     );
     periodo_inicio_id = elegirAlAzar(validos)?.id ?? ctx.periodos[0].id;
   }
- 
+
   let salon_id = null;
   if (!seccion.sin_salon) {
     salon_id = seccion.salon_fijo_id;
     if (!salon_id) {
       const validos = salonesValidos(ctx, false, periodo_inicio_id);
-      salon_id = elegirAlAzar(validos)?.id ?? null;
+      
+      // Evitar salones ya usados en este slot
+      const ocupados = new Set(
+        genesYaAsignados
+          .filter(g => g.dia_horario_id === dia_horario_id &&
+                       g.periodo_inicio_id === periodo_inicio_id &&
+                       g.salon_id)
+          .map(g => g.salon_id)
+      );
+      
+      const libres = validos.filter(s => !ocupados.has(s.id));
+      salon_id = elegirAlAzar(libres.length > 0 ? libres : validos)?.id ?? null;
     }
   }
- 
+
   return {
-    seccion_id:             seccion.id,
-    seccion_lab_id:         null,
+    seccion_id: seccion.id,
+    seccion_lab_id: null,
     salon_id,
     docente_id,
     periodo_inicio_id,
-    periodo_fin_id:         periodo_inicio_id,
+    periodo_fin_id: periodo_inicio_id,
     dia_horario_id,
-    distribucion_lab:       null,
-    curso_id:               seccion.curso_id,
-    es_laboratorio:         false,
-    sin_salon:              seccion.sin_salon,
-    semestre:               seccion.semestre,
-    carrera_id:             seccion.carrera_id,
-    tipo:                   seccion.tipo,
-    puede_manana:           seccion.puede_manana,
-    puede_tarde:            seccion.puede_tarde,
-    num_estudiantes:        seccion.num_estudiantes,
-    salon_fijo_id:          seccion.salon_fijo_id          ?? null,
-    docente_fijo_id:        seccion.docente_fijo_id        ?? null,
+    distribucion_lab: null,
+    curso_id: seccion.curso_id,
+    es_laboratorio: false,
+    sin_salon: seccion.sin_salon,
+    semestre: seccion.semestre,
+    carrera_id: seccion.carrera_id,
+    tipo: seccion.tipo,
+    puede_manana: seccion.puede_manana,
+    puede_tarde: seccion.puede_tarde,
+    num_estudiantes: seccion.num_estudiantes,
+    salon_fijo_id: seccion.salon_fijo_id ?? null,
+    docente_fijo_id: seccion.docente_fijo_id ?? null,
     periodo_fijo_inicio_id: seccion.periodo_fijo_inicio_id ?? null,
-    dia_horario_fijo_id:    seccion.dia_horario_fijo_id    ?? null,
+    dia_horario_fijo_id: seccion.dia_horario_fijo_id ?? null,
   };
 }
  
@@ -221,15 +232,15 @@ function generarGenLab(lab, ctx) {
 // ------------- INDIVIDUO Y POBLACIÓN INICIAL ----------------
  
 function generarIndividuo(ctx) {
-  return {
-    genes: [
-      ...ctx.secciones.map(s => generarGenSeccion(s, ctx)),
-      ...ctx.labs.map(l      => generarGenLab(l, ctx)),
-    ],
-    aptitud: null,
-  };
+  const genes = [];
+  for (const s of ctx.secciones) {
+    genes.push(generarGenSeccion(s, ctx, genes));
+  }
+  for (const l of ctx.labs) {
+    genes.push(generarGenLab(l, ctx, genes));
+  }
+  return { genes, aptitud: null };
 }
- 
 function generarPoblacion(ctx) {
   const n = ctx.config.tamano_poblacion;
   return Array.from({ length: n }, () => generarIndividuo(ctx));

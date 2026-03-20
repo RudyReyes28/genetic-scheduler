@@ -463,6 +463,9 @@ const estado = ref({
 const ultimoResultado = ref(null)
 const running = ref(false)
 const pollingId = ref(null)
+const wsInstance = ref(null)
+const wsConnected = ref(false)
+const wsReconnectTimeoutId = ref(null)
 
 const chartCanvas = ref(null)
 let chartInstance = null
@@ -501,6 +504,17 @@ const detalleForm = reactive({
 })
 
 const apiBase = import.meta.env.VITE_API_URL
+
+const buildWsUrl = () => {
+  const normalizedBase = String(apiBase || '').replace(/\/$/, '')
+  const withoutApiSuffix = normalizedBase.replace(/\/api$/, '')
+  const url = new URL(withoutApiSuffix)
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+  url.pathname = '/ws/algoritmo'
+  url.search = ''
+  url.hash = ''
+  return url.toString()
+}
 
 const resetMessages = () => {
   error.value = ''
@@ -581,6 +595,7 @@ const renderCurrentChart = async () => {
 }
 
 const startPolling = () => {
+  if (wsConnected.value) return
   stopPolling()
 
   pollingId.value = window.setInterval(async () => {
@@ -633,6 +648,129 @@ const consultarEstado = async (silent = false) => {
     if (!silent) {
       error.value = err?.response?.data?.error || 'Error consultando estado del algoritmo'
     }
+  }
+}
+
+const clearWsReconnect = () => {
+  if (wsReconnectTimeoutId.value) {
+    clearTimeout(wsReconnectTimeoutId.value)
+    wsReconnectTimeoutId.value = null
+  }
+}
+
+const scheduleWsReconnect = () => {
+  if (wsReconnectTimeoutId.value || !running.value) return
+
+  wsReconnectTimeoutId.value = window.setTimeout(() => {
+    wsReconnectTimeoutId.value = null
+    connectAlgoritmoWs()
+  }, 2000)
+}
+
+const handleWsProgreso = (payload) => {
+  if (!payload || typeof payload.generacion !== 'number') return
+
+  estado.value = {
+    ...estado.value,
+    corriendo: true,
+    generacion: payload.generacion,
+    mejorAptitud: payload.mejorAptitud ?? estado.value.mejorAptitud,
+    conflictos: payload.conflictos ?? estado.value.conflictos,
+  }
+
+  running.value = true
+
+  const exists = livePoints.value.some((point) => point.generacion === payload.generacion)
+  if (!exists) {
+    livePoints.value.push({
+      generacion: payload.generacion,
+      mejorAptitud: payload.mejorAptitud,
+      conflictos: payload.conflictos,
+    })
+    updateChartFromLivePoints()
+  }
+}
+
+const handleWsEstado = async (payload) => {
+  if (!payload) return
+
+  estado.value = payload
+  running.value = Boolean(payload.corriendo)
+
+  if (!payload.corriendo && payload.horarioId) {
+    await cargarHistorialFinal(payload.horarioId)
+    await loadHorarios()
+  }
+
+  if (!payload.corriendo && payload.error) {
+    error.value = payload.error
+  }
+}
+
+const connectAlgoritmoWs = () => {
+  clearWsReconnect()
+
+  try {
+    const ws = new WebSocket(buildWsUrl())
+    wsInstance.value = ws
+
+    ws.onopen = () => {
+      wsConnected.value = true
+      stopPolling()
+    }
+
+    ws.onmessage = async (event) => {
+      let data
+      try {
+        data = JSON.parse(event.data)
+      } catch {
+        return
+      }
+
+      if (data?.type === 'progreso') {
+        handleWsProgreso(data.payload)
+        return
+      }
+
+      if (data?.type === 'estado') {
+        await handleWsEstado(data.payload)
+        return
+      }
+
+      if (data?.type === 'error' && data?.payload?.message) {
+        error.value = data.payload.message
+      }
+    }
+
+    ws.onclose = () => {
+      wsConnected.value = false
+      wsInstance.value = null
+
+      if (running.value) {
+        startPolling()
+        scheduleWsReconnect()
+      }
+    }
+
+    ws.onerror = () => {
+      ws.close()
+    }
+  } catch {
+    wsConnected.value = false
+    if (running.value) {
+      startPolling()
+      scheduleWsReconnect()
+    }
+  }
+}
+
+const closeAlgoritmoWs = () => {
+  clearWsReconnect()
+  wsConnected.value = false
+
+  if (wsInstance.value) {
+    wsInstance.value.close()
+    wsInstance.value = null
   }
 }
 
@@ -938,6 +1076,7 @@ const formatDate = (value) => {
 }
 
 onMounted(async () => {
+  connectAlgoritmoWs()
   await buildChart()
   await consultarEstado(true)
   await loadHorarios()
@@ -960,6 +1099,7 @@ watch(activeTab, async (value) => {
 })
 
 onBeforeUnmount(() => {
+  closeAlgoritmoWs()
   stopPolling()
   if (chartInstance) {
     chartInstance.destroy()

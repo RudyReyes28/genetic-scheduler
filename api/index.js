@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const http = require('http');
+const { initAlgoritmoWs } = require('./src/realtime/algoritmo.ws');
 
 require('dotenv').config();
 const apiRoutes = require('./src/routes');
@@ -41,7 +43,12 @@ app.use((error, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+
+initAlgoritmoWs(server);
+
+server.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
   console.log(`API disponible en http://localhost:${PORT}/health`);
+  console.log(`WebSocket disponible en ws://localhost:${PORT}/ws/algoritmo`);
 });
