@@ -201,6 +201,14 @@ CREATE TABLE horario_historial (
 ALTER TABLE horario_detalle
 ADD COLUMN dia_especifico VARCHAR(20);
 
+INSERT INTO carreras (nombre, codigo) VALUES
+  ('Ingeniería en Ciencias y Sistemas',   'SISTEMAS'),
+  ('Ingeniería Civil',                    'CIVIL'),
+  ('Ingeniería Mecánica',                 'MECANICA'),
+  ('Ingeniería Mecánica Industrial',      'MEC_INDUSTRIAL'),
+  ('Ingeniería Industrial',               'INDUSTRIAL');
+
+
 INSERT INTO configuracion_algoritmo (
   tamano_poblacion, max_generaciones, aptitud_objetivo,
   tasa_mutacion, metodo_seleccion, metodo_cruce, metodo_mutacion,
