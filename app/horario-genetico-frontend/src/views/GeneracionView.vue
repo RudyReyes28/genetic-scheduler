@@ -1112,6 +1112,7 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
@@ -1139,7 +1140,7 @@ onBeforeUnmount(() => {
 .card {
   background: white;
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px;
   margin-bottom: 18px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
   width: 100%;
@@ -1156,7 +1157,7 @@ onBeforeUnmount(() => {
 .filters-grid,
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
 }
 
@@ -1212,7 +1213,7 @@ onBeforeUnmount(() => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 14px;
   margin-bottom: 18px;
 }
@@ -1238,7 +1239,7 @@ onBeforeUnmount(() => {
 }
 
 .chart-wrapper {
-  height: 360px;
+  height: clamp(240px, 38vh, 360px);
 }
 
 .table-wrapper {
@@ -1249,7 +1250,7 @@ onBeforeUnmount(() => {
 .table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1200px;
+  min-width: 980px;
 }
 
 th,
@@ -1265,7 +1266,7 @@ th {
 
 .details-table {
   margin-top: 16px;
-  min-width: 1150px;
+  min-width: 950px;
 }
 
 .actions {
@@ -1340,7 +1341,7 @@ th {
 
 .meta-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -1390,22 +1391,18 @@ th {
 }
 
 .page {
-  width: 110%;
-  max-width: 1800px;
+  width: 100%;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 20px 30px;
+  padding: clamp(12px, 2vw, 20px);
 }
 
 @media (max-width: 1100px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .config-grid,
   .filters-grid,
   .form-grid,
   .meta-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1423,6 +1420,11 @@ th {
   .list-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .card,
+  .modal {
+    padding: 14px;
   }
 
 }
