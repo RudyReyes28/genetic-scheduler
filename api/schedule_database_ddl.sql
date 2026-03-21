@@ -200,3 +200,17 @@ CREATE TABLE horario_historial (
 
 ALTER TABLE horario_detalle
 ADD COLUMN dia_especifico VARCHAR(20);
+
+INSERT INTO configuracion_algoritmo (
+  tamano_poblacion, max_generaciones, aptitud_objetivo,
+  tasa_mutacion, metodo_seleccion, metodo_cruce, metodo_mutacion,
+  duracion_periodo,
+  hora_inicio_manana, hora_fin_manana,
+  hora_inicio_tarde,  hora_fin_tarde
+) VALUES (
+  100, 500, NULL,
+  0.05, 'torneo', 'un_punto', 'intercambio',
+  50,
+  '08:00', '13:00',
+  '13:40', '21:10'
+);
