@@ -131,7 +131,8 @@ function penalizarConflictosSemestre(slotSemestre, detalle) {
   for (const [key, genes] of Object.entries(slotSemestre)) {
     const porCurso = {};
     for (const gen of genes) {
-      const cursoKey = gen.seccion_id ?? `lab-${gen.seccion_lab_id}`;
+      // Agrupar por curso_id — secciones distintas del mismo curso NO son conflicto
+      const cursoKey = gen.curso_id;
       if (!porCurso[cursoKey]) porCurso[cursoKey] = gen;
     }
     const cursosDistintos = Object.keys(porCurso).length;
