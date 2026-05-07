@@ -8,7 +8,7 @@
 //     a. Conservar élite directamente (sin cruce ni mutación)
 //     b. Seleccionar padres
 //     c. Cruzar padres → 2 hijos
-//     d. Mutar hijos
+//     d. Decidir si mutar cada hijo y mutarlo si corresponde
 //     e. Agregar hijos a nueva población
 //  5. Reemplazar población con la nueva
 //  6. Registrar mejor aptitud de la generación
@@ -62,14 +62,24 @@ async function ejecutarAG(ctx, onProgreso = null) {
     }
 
     // Generar hijos
+    const debeMutarGeneracion = Math.random() < config.tasa_mutacion;
+
     while (nuevaPoblacion.length < config.tamano_poblacion) {
       const [padreA, padreB] = seleccionarPadres(poblacion, config.metodo_seleccion, 5);
       const [hijo1, hijo2]   = cruzar(padreA, padreB, config.metodo_cruce);
-      const mutado1 = mutar(hijo1, config.metodo_mutacion, config.tasa_mutacion, ctx);
-      const mutado2 = mutar(hijo2, config.metodo_mutacion, config.tasa_mutacion, ctx);
 
-      nuevaPoblacion.push(mutado1);
-      if (nuevaPoblacion.length < config.tamano_poblacion) nuevaPoblacion.push(mutado2);
+      if (debeMutarGeneracion) {
+        mutar(hijo1, config.metodo_mutacion, config.tasa_mutacion, ctx);
+      }
+
+      nuevaPoblacion.push(hijo1);
+
+      if (nuevaPoblacion.length < config.tamano_poblacion) {
+        if (debeMutarGeneracion) {
+          mutar(hijo2, config.metodo_mutacion, config.tasa_mutacion, ctx);
+        }
+        nuevaPoblacion.push(hijo2);
+      }
     }
 
     poblacion = evaluarPoblacion(nuevaPoblacion, ctx);

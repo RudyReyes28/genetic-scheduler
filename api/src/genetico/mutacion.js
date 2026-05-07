@@ -16,9 +16,8 @@
 //    que el cruce nunca alcanzaría.
 //
 // CUÁNDO APLICA CADA UNA:
-//    Ambas se aplican con probabilidad tasa_mutacion (ej: 0.05 = 5%).
-//    Se aplican sobre cada gen individualmente, no sobre el individuo completo.
-//    Es decir, cada gen tiene un 5% de probabilidad de mutar.
+//    La probabilidad se decide fuera de este módulo.
+//    Cuando estas funciones se llaman, aplican la mutación directamente.
 //
 // IMPORTANTE:
 //    Al igual que en el cruce, solo se mutan los atributos de asignación.
@@ -34,18 +33,18 @@ const { GEN, esLaboratorio, setDistribucionLab,
  
 // ----------------------- MUTACIÓN POR INTERCAMBIO ----------------------------
  
-function mutacionIntercambio(individuo, tasa) {
+function mutacionIntercambio(individuo) {
   const idxCursos = individuo.genes
     .map((g, i) => (!esLaboratorio(g) ? i : null)).filter(i => i !== null);
   const idxLabs = individuo.genes
     .map((g, i) => (esLaboratorio(g)  ? i : null)).filter(i => i !== null);
  
-  if (idxCursos.length >= 2 && Math.random() < tasa) {
+  if (idxCursos.length >= 2) {
     const [i, j] = elegirDosDinstintos(idxCursos);
     intercambiarAsignacion(individuo.genes, i, j);
   }
  
-  if (idxLabs.length >= 2 && Math.random() < tasa) {
+  if (idxLabs.length >= 2) {
     const [i, j] = elegirDosDinstintos(idxLabs);
     intercambiarAsignacion(individuo.genes, i, j);
   }
@@ -95,10 +94,8 @@ function intercambiarAsignacion(genes, i, j) {
  
 // -------------------- MUTACIÓN POR REINSERCIÓN ALEATORIA ----------------------------
  
-function mutacionReisercion(individuo, tasa, ctx) {
+function mutacionReisercion(individuo, ctx) {
   for (let i = 0; i < individuo.genes.length; i++) {
-    if (Math.random() >= tasa) continue;
-
     const gen = individuo.genes[i];
     const numPeriodos = esLaboratorio(gen) ? 3 : 1;
 
@@ -184,12 +181,12 @@ function mutacionReisercion(individuo, tasa, ctx) {
 
 // ------------------- FUNCION UNIFICADA --------------
 
-function mutar(individuo, metodo = 'intercambio', tasa = 0.05, ctx = null) {
+function mutar(individuo, metodo = 'intercambio', _tasa = 0.05, ctx = null) {
   if (metodo === 'reisercion') {
     if (!ctx) throw new Error('mutar: ctx es requerido para método reisercion');
-    return mutacionReisercion(individuo, tasa, ctx);
+    return mutacionReisercion(individuo, ctx);
   }
-  return mutacionIntercambio(individuo, tasa);
+  return mutacionIntercambio(individuo);
 }
  
 // -------------------- HELPERS --------------
