@@ -39,6 +39,7 @@
 //     periodo_fijo_inicio_id, dia_horario_fijo_id
 
 const { repararIndividuo } = require('./cromosoma');
+const { GEN, clonarGen } = require('./genoma');
 
 // -------------------- HELPERS --------------
 
@@ -48,28 +49,24 @@ const { repararIndividuo } = require('./cromosoma');
  * distribucion_lab se copia completo cuando aplica.
  */
 function copiarAsignacion(destino, fuente) {
-  return {
-    ...destino,
-    salon_id:          fuente.salon_id,
-    docente_id:        fuente.docente_id,
-    periodo_inicio_id: fuente.periodo_inicio_id,
-    periodo_fin_id:    fuente.periodo_fin_id,
-    dia_horario_id:    fuente.dia_horario_id,
-    distribucion_lab:  fuente.distribucion_lab ?? null,
-  };
+  const copia = clonarGen(destino);
+  copia[GEN.SALON_ID] = fuente[GEN.SALON_ID];
+  copia[GEN.DOCENTE_ID] = fuente[GEN.DOCENTE_ID];
+  copia[GEN.PERIODO_INICIO_ID] = fuente[GEN.PERIODO_INICIO_ID];
+  copia[GEN.PERIODO_FIN_ID] = fuente[GEN.PERIODO_FIN_ID];
+  copia[GEN.DIA_HORARIO_ID] = fuente[GEN.DIA_HORARIO_ID];
+  copia[GEN.DIST_MARTES_INICIO_ID] = fuente[GEN.DIST_MARTES_INICIO_ID];
+  copia[GEN.DIST_MARTES_FIN_ID] = fuente[GEN.DIST_MARTES_FIN_ID];
+  copia[GEN.DIST_JUEVES_INICIO_ID] = fuente[GEN.DIST_JUEVES_INICIO_ID];
+  copia[GEN.DIST_JUEVES_FIN_ID] = fuente[GEN.DIST_JUEVES_FIN_ID];
+  copia[GEN.DIST_MARTES_NUM_PERIODOS] = fuente[GEN.DIST_MARTES_NUM_PERIODOS];
+  copia[GEN.DIST_JUEVES_NUM_PERIODOS] = fuente[GEN.DIST_JUEVES_NUM_PERIODOS];
+  return copia;
 }
 
 function clonarIndividuo(individuo) {
   return {
-    genes:   individuo.genes.map(g => ({
-      ...g,
-      distribucion_lab: g.distribucion_lab
-        ? {
-            martes: { ...g.distribucion_lab.martes },
-            jueves: { ...g.distribucion_lab.jueves },
-          }
-        : null,
-    })),
+    genes: individuo.genes.map(clonarGen),
     aptitud: null,
   };
 }
