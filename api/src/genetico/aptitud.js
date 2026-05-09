@@ -5,34 +5,48 @@ const {
   obtenerBloques,
   nombreGen,
 } = require('./genoma');
-const { periodoFromValue, salonFromValue, docenteFromValue } = require('./genoma');
+
+function resolverDesdeValor(valor, porIndice, porId) {
+  if (valor == null) return null;
+  if (Number.isInteger(valor) && porIndice?.[valor]) return porIndice[valor];
+  return porId?.[valor] ?? null;
+}
+
 function construirMapas(genes, ctx) {
   const slotDocente = {};
   const slotSalon = {};
   const slotSemestre = {};
 
+  const docentesByIndex = ctx.docentesByIndex;
+  const docentesById = ctx.docentesById;
+  const salonesByIndex = ctx.salonesByIndex;
+  const salonesById = ctx.salonesById;
+
   for (const gen of genes) {
+    const tieneDocente = gen[GEN.DOCENTE_ID] != null;
+    const tieneSalon = gen[GEN.SALON_ID] != null;
+    const esObligatorio = gen[GEN.TIPO] === TIPO_OBLIGATORIO && gen[GEN.SEMESTRE] && gen[GEN.CARRERA_ID];
+    const docenteObj = tieneDocente ? resolverDesdeValor(gen[GEN.DOCENTE_ID], docentesByIndex, docentesById) : null;
+    const docenteId = docenteObj ? docenteObj.id : gen[GEN.DOCENTE_ID];
+    const salonObj = tieneSalon ? resolverDesdeValor(gen[GEN.SALON_ID], salonesByIndex, salonesById) : null;
+    const salonId = salonObj ? salonObj.id : gen[GEN.SALON_ID];
     const bloques = obtenerBloques(gen);
 
     for (const { dia, periodoInicio, periodoFin } of bloques) {
       for (let periodo = periodoInicio; periodo <= periodoFin; periodo++) {
-        if (gen[GEN.DOCENTE_ID]) {
-          const docenteObj = docenteFromValue(ctx, gen[GEN.DOCENTE_ID]);
-          const docenteId = docenteObj ? docenteObj.id : gen[GEN.DOCENTE_ID];
+        if (tieneDocente) {
           const keyDocente = `${docenteId}-${dia}-${periodo}`;
           if (!slotDocente[keyDocente]) slotDocente[keyDocente] = [];
           slotDocente[keyDocente].push(gen);
         }
 
-        if (gen[GEN.SALON_ID]) {
-          const salonObj = salonFromValue(ctx, gen[GEN.SALON_ID]);
-          const salonId = salonObj ? salonObj.id : gen[GEN.SALON_ID];
+        if (tieneSalon) {
           const keySalon = `${salonId}-${dia}-${periodo}`;
           if (!slotSalon[keySalon]) slotSalon[keySalon] = [];
           slotSalon[keySalon].push(gen);
         }
 
-        if (gen[GEN.TIPO] === TIPO_OBLIGATORIO && gen[GEN.SEMESTRE] && gen[GEN.CARRERA_ID]) {
+        if (esObligatorio) {
           const keySemestre = `${gen[GEN.SEMESTRE]}-${gen[GEN.CARRERA_ID]}-${dia}-${periodo}`;
           if (!slotSemestre[keySemestre]) slotSemestre[keySemestre] = [];
           slotSemestre[keySemestre].push(gen);
@@ -80,13 +94,9 @@ function penalizarConflictosSalon(slotSalon, detalle) {
 function penalizarConflictosSemestre(slotSemestre, detalle) {
   let puntaje = 0;
   for (const [key, genes] of Object.entries(slotSemestre)) {
-    const porCurso = {};
-    for (const gen of genes) {
-      const cursoKey = gen[GEN.CURSO_ID];
-      if (!porCurso[cursoKey]) porCurso[cursoKey] = gen;
-    }
-
-    const cursosDistintos = Object.keys(porCurso).length;
+    const cursos = new Set();
+    for (const gen of genes) cursos.add(gen[GEN.CURSO_ID]);
+    const cursosDistintos = cursos.size;
     if (cursosDistintos > 1) {
       const conflictos = cursosDistintos - 1;
       puntaje -= conflictos * 80;
@@ -102,8 +112,11 @@ function penalizarConflictosSemestre(slotSemestre, detalle) {
 
 function penalizarHorarioIncorrecto(genes, ctx, detalle) {
   let puntaje = 0;
+  const periodosByIndex = ctx.periodosByIndex;
+  const periodosById = ctx.periodosById;
+
   for (const gen of genes) {
-    const periodo = periodoFromValue(ctx, gen[GEN.PERIODO_INICIO_ID]);
+    const periodo = resolverDesdeValor(gen[GEN.PERIODO_INICIO_ID], periodosByIndex, periodosById);
     if (!periodo) continue;
 
     if (periodo.es_manana && !gen[GEN.PUEDE_MANANA]) {
@@ -129,9 +142,12 @@ function penalizarHorarioIncorrecto(genes, ctx, detalle) {
 
 function penalizarSalonInadecuado(genes, ctx, detalle) {
   let puntaje = 0;
+  const salonesByIndex = ctx.salonesByIndex;
+  const salonesById = ctx.salonesById;
+
   for (const gen of genes) {
     if (!gen[GEN.SALON_ID]) continue;
-    const salon = salonFromValue(ctx, gen[GEN.SALON_ID]);
+    const salon = resolverDesdeValor(gen[GEN.SALON_ID], salonesByIndex, salonesById);
     if (!salon) continue;
 
     if (!esLaboratorio(gen) && salon.es_laboratorio && !salon.lab_habilitado_teorico) {
@@ -157,10 +173,15 @@ function penalizarSalonInadecuado(genes, ctx, detalle) {
 
 function penalizarDocenteFueraDeHorario(genes, ctx, detalle) {
   let puntaje = 0;
+  const docentesByIndex = ctx.docentesByIndex;
+  const docentesById = ctx.docentesById;
+  const periodosByIndex = ctx.periodosByIndex;
+  const periodosById = ctx.periodosById;
+
   for (const gen of genes) {
     if (!gen[GEN.DOCENTE_ID]) continue;
-    const docente = docenteFromValue(ctx, gen[GEN.DOCENTE_ID]);
-    const periodo = periodoFromValue(ctx, gen[GEN.PERIODO_INICIO_ID]);
+    const docente = resolverDesdeValor(gen[GEN.DOCENTE_ID], docentesByIndex, docentesById);
+    const periodo = resolverDesdeValor(gen[GEN.PERIODO_INICIO_ID], periodosByIndex, periodosById);
     if (!docente || !periodo) continue;
 
     if (periodo.hora_inicio < docente.hora_entrada || periodo.hora_fin > docente.hora_salida) {
@@ -177,9 +198,12 @@ function penalizarDocenteFueraDeHorario(genes, ctx, detalle) {
 
 function penalizarCapacidadSuperada(genes, ctx, detalle) {
   let puntaje = 0;
+  const salonesByIndex = ctx.salonesByIndex;
+  const salonesById = ctx.salonesById;
+
   for (const gen of genes) {
     if (!gen[GEN.SALON_ID] || !gen[GEN.NUM_ESTUDIANTES]) continue;
-    const salon = salonFromValue(ctx, gen[GEN.SALON_ID]);
+    const salon = resolverDesdeValor(gen[GEN.SALON_ID], salonesByIndex, salonesById);
     if (!salon || !salon.capacidad) continue;
 
     if (gen[GEN.NUM_ESTUDIANTES] > salon.capacidad) {
@@ -196,6 +220,9 @@ function penalizarCapacidadSuperada(genes, ctx, detalle) {
 
 function penalizarDocenteNoAutorizado(genes, ctx, detalle) {
   let puntaje = 0;
+  const docentesByIndex = ctx.docentesByIndex;
+  const docentesById = ctx.docentesById;
+
   for (const gen of genes) {
     if (!gen[GEN.DOCENTE_ID] || !gen[GEN.CURSO_ID]) continue;
 
@@ -203,7 +230,7 @@ function penalizarDocenteNoAutorizado(genes, ctx, detalle) {
       ? (ctx.docentesCursoLab[gen[GEN.CURSO_ID]] ?? ctx.docentesCurso[gen[GEN.CURSO_ID]] ?? [])
       : (ctx.docentesCurso[gen[GEN.CURSO_ID]] ?? []);
 
-    const docenteObj = docenteFromValue(ctx, gen[GEN.DOCENTE_ID]);
+    const docenteObj = resolverDesdeValor(gen[GEN.DOCENTE_ID], docentesByIndex, docentesById);
     const docenteId = docenteObj ? docenteObj.id : gen[GEN.DOCENTE_ID];
 
     if (posibles.length > 0 && !posibles.includes(docenteId)) {
@@ -278,9 +305,12 @@ function bonoContinuidadSemestre(genes, detalle) {
 
 function bonoCapacidadAdecuada(genes, ctx, detalle) {
   let puntaje = 0;
+  const salonesByIndex = ctx.salonesByIndex;
+  const salonesById = ctx.salonesById;
+
   for (const gen of genes) {
     if (!gen[GEN.SALON_ID] || !gen[GEN.NUM_ESTUDIANTES]) continue;
-    const salon = ctx.salonesById?.[gen[GEN.SALON_ID]] ?? ctx.salones.find(s => s.id === gen[GEN.SALON_ID]);
+    const salon = resolverDesdeValor(gen[GEN.SALON_ID], salonesByIndex, salonesById);
     if (!salon || !salon.capacidad) continue;
 
     if (gen[GEN.NUM_ESTUDIANTES] <= salon.capacidad) {

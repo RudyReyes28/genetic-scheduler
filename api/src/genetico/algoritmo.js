@@ -45,8 +45,10 @@ async function ejecutarAG(ctx, onProgreso = null) {
   let poblacion      = generarPoblacion(ctx);
   evaluarPoblacion(poblacion, ctx);
 
+  const evaluacionInicial = evaluarAptitud(poblacion[0], ctx, true);
   let mejorIndividuo = clonarIndividuo(poblacion[0]);
-  let generacion     = 0;
+  let mejorConflictos = evaluacionInicial.detalle.filter(d => d.penalizacion).length;
+  let generacion      = 0;
 
   while (generacion < config.max_generaciones) {
     generacion++;
@@ -85,15 +87,14 @@ async function ejecutarAG(ctx, onProgreso = null) {
     poblacion = evaluarPoblacion(nuevaPoblacion, ctx);
 
     if (poblacion[0].aptitud > mejorIndividuo.aptitud) {
+      const evaluacionMejor = evaluarAptitud(poblacion[0], ctx, true);
       mejorIndividuo = clonarIndividuo(poblacion[0]);
+      mejorConflictos = evaluacionMejor.detalle.filter(d => d.penalizacion).length;
     }
 
-    const { detalle } = evaluarAptitud(mejorIndividuo, ctx, true);
-    const numConflictos = detalle.filter(d => d.penalizacion).length;
+    historial.push({ generacion, mejorAptitud: mejorIndividuo.aptitud, conflictos: mejorConflictos });
 
-    historial.push({ generacion, mejorAptitud: mejorIndividuo.aptitud, conflictos: numConflictos });
-
-    if (onProgreso) onProgreso({ generacion, mejorAptitud: mejorIndividuo.aptitud, conflictos: numConflictos });
+    if (onProgreso) onProgreso({ generacion, mejorAptitud: mejorIndividuo.aptitud, conflictos: mejorConflictos });
   }
 
   const stats = {
