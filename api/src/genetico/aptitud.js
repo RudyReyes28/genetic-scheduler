@@ -251,7 +251,10 @@ function penalizarSobreusoPeriodo(genes, detalle) {
 
   for (const gen of genes) {
     if (gen[GEN.SIN_SALON] || esLaboratorio(gen)) continue;
-    const key = `${gen[GEN.DIA_HORARIO_ID]}-${gen[GEN.PERIODO_INICIO_ID]}`;
+    // Usar valores crudos; si están null, usaremos "null" en la key (mejor que "undefined")
+    const diaHorario = gen[GEN.DIA_HORARIO_ID] ?? 'null';
+    const periodoInicio = gen[GEN.PERIODO_INICIO_ID] ?? 'null';
+    const key = `${diaHorario}-${periodoInicio}`;
     conteo[key] = (conteo[key] ?? 0) + 1;
   }
 

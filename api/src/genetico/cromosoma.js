@@ -114,10 +114,11 @@ function generarGenSeccion(seccion, ctx, genesYaAsignados = []) {
     if (!salon_id) {
       const validos = salonesValidos(ctx, false, periodo_inicio_id);
 
+      const periodo_inicio_idx = periodoIndexFromId(ctx, periodo_inicio_id);
       const ocupados = new Set(
         genesYaAsignados
           .filter(gen => gen[GEN.DIA_HORARIO_ID] === dia_horario_id &&
-            gen[GEN.PERIODO_INICIO_ID] === periodo_inicio_id &&
+            gen[GEN.PERIODO_INICIO_ID] === periodo_inicio_idx &&
             gen[GEN.SALON_ID])
           .map(gen => gen[GEN.SALON_ID])
       );
