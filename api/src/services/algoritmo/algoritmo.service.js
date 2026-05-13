@@ -69,7 +69,7 @@ async function ejecutar(body) {
 
     const { mejorIndividuo, historial, stats } = await ejecutarAG(ctx, onProgreso);
 
-    const horarioId = await guardarHorario(mejorIndividuo, stats, nombre);
+    const horarioId = await guardarHorario(mejorIndividuo, stats, nombre, ctx);
     estadoEjecucion.horarioId = horarioId;
 
     await guardarHistorial(horarioId, historial);

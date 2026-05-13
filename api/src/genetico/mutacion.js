@@ -16,9 +16,8 @@
 //    que el cruce nunca alcanzaría.
 //
 // CUÁNDO APLICA CADA UNA:
-//    Ambas se aplican con probabilidad tasa_mutacion (ej: 0.05 = 5%).
-//    Se aplican sobre cada gen individualmente, no sobre el individuo completo.
-//    Es decir, cada gen tiene un 5% de probabilidad de mutar.
+//    La probabilidad se decide fuera de este módulo.
+//    Cuando estas funciones se llaman, aplican la mutación directamente.
 //
 // IMPORTANTE:
 //    Al igual que en el cruce, solo se mutan los atributos de asignación.
@@ -28,22 +27,24 @@
 const { repararIndividuo, elegirAlAzar,
         periodosValidos, salonesValidos,
         calcularPeriodoFin,
-        generarDistribucionLab }          = require('./cromosoma');
+  generarDistribucionLab }          = require('./cromosoma');
+const { GEN, esLaboratorio, setDistribucionLab,
+        periodoIndexFromId, salonIndexFromId, docenteIndexFromId } = require('./genoma');
  
 // ----------------------- MUTACIÓN POR INTERCAMBIO ----------------------------
  
-function mutacionIntercambio(individuo, tasa) {
+function mutacionIntercambio(individuo) {
   const idxCursos = individuo.genes
-    .map((g, i) => (!g.es_laboratorio ? i : null)).filter(i => i !== null);
+    .map((g, i) => (!esLaboratorio(g) ? i : null)).filter(i => i !== null);
   const idxLabs = individuo.genes
-    .map((g, i) => (g.es_laboratorio  ? i : null)).filter(i => i !== null);
+    .map((g, i) => (esLaboratorio(g)  ? i : null)).filter(i => i !== null);
  
-  if (idxCursos.length >= 2 && Math.random() < tasa) {
+  if (idxCursos.length >= 2) {
     const [i, j] = elegirDosDinstintos(idxCursos);
     intercambiarAsignacion(individuo.genes, i, j);
   }
  
-  if (idxLabs.length >= 2 && Math.random() < tasa) {
+  if (idxLabs.length >= 2) {
     const [i, j] = elegirDosDinstintos(idxLabs);
     intercambiarAsignacion(individuo.genes, i, j);
   }
@@ -53,111 +54,125 @@ function mutacionIntercambio(individuo, tasa) {
  
 function intercambiarAsignacion(genes, i, j) {
   const tmp = {
-    salon_id:          genes[i].salon_id,
-    docente_id:        genes[i].docente_id,
-    periodo_inicio_id: genes[i].periodo_inicio_id,
-    periodo_fin_id:    genes[i].periodo_fin_id,
-    dia_horario_id:    genes[i].dia_horario_id,
-    distribucion_lab:  genes[i].distribucion_lab,
+    salon_id:          genes[i][GEN.SALON_ID],
+    docente_id:        genes[i][GEN.DOCENTE_ID],
+    periodo_inicio_id: genes[i][GEN.PERIODO_INICIO_ID],
+    periodo_fin_id:    genes[i][GEN.PERIODO_FIN_ID],
+    dia_horario_id:    genes[i][GEN.DIA_HORARIO_ID],
+    dist_martes_inicio: genes[i][GEN.DIST_MARTES_INICIO_ID],
+    dist_martes_fin:    genes[i][GEN.DIST_MARTES_FIN_ID],
+    dist_jueves_inicio: genes[i][GEN.DIST_JUEVES_INICIO_ID],
+    dist_jueves_fin:    genes[i][GEN.DIST_JUEVES_FIN_ID],
+    dist_martes_num:    genes[i][GEN.DIST_MARTES_NUM_PERIODOS],
+    dist_jueves_num:    genes[i][GEN.DIST_JUEVES_NUM_PERIODOS],
   };
  
-  genes[i].salon_id          = genes[j].salon_id;
-  genes[i].docente_id        = genes[j].docente_id;
-  genes[i].periodo_inicio_id = genes[j].periodo_inicio_id;
-  genes[i].periodo_fin_id    = genes[j].periodo_fin_id;
-  genes[i].dia_horario_id    = genes[j].dia_horario_id;
-  genes[i].distribucion_lab  = genes[j].distribucion_lab;
+  genes[i][GEN.SALON_ID] = genes[j][GEN.SALON_ID];
+  genes[i][GEN.DOCENTE_ID] = genes[j][GEN.DOCENTE_ID];
+  genes[i][GEN.PERIODO_INICIO_ID] = genes[j][GEN.PERIODO_INICIO_ID];
+  genes[i][GEN.PERIODO_FIN_ID] = genes[j][GEN.PERIODO_FIN_ID];
+  genes[i][GEN.DIA_HORARIO_ID] = genes[j][GEN.DIA_HORARIO_ID];
+  genes[i][GEN.DIST_MARTES_INICIO_ID] = genes[j][GEN.DIST_MARTES_INICIO_ID];
+  genes[i][GEN.DIST_MARTES_FIN_ID] = genes[j][GEN.DIST_MARTES_FIN_ID];
+  genes[i][GEN.DIST_JUEVES_INICIO_ID] = genes[j][GEN.DIST_JUEVES_INICIO_ID];
+  genes[i][GEN.DIST_JUEVES_FIN_ID] = genes[j][GEN.DIST_JUEVES_FIN_ID];
+  genes[i][GEN.DIST_MARTES_NUM_PERIODOS] = genes[j][GEN.DIST_MARTES_NUM_PERIODOS];
+  genes[i][GEN.DIST_JUEVES_NUM_PERIODOS] = genes[j][GEN.DIST_JUEVES_NUM_PERIODOS];
  
-  genes[j].salon_id          = tmp.salon_id;
-  genes[j].docente_id        = tmp.docente_id;
-  genes[j].periodo_inicio_id = tmp.periodo_inicio_id;
-  genes[j].periodo_fin_id    = tmp.periodo_fin_id;
-  genes[j].dia_horario_id    = tmp.dia_horario_id;
-  genes[j].distribucion_lab  = tmp.distribucion_lab;
+  genes[j][GEN.SALON_ID] = tmp.salon_id;
+  genes[j][GEN.DOCENTE_ID] = tmp.docente_id;
+  genes[j][GEN.PERIODO_INICIO_ID] = tmp.periodo_inicio_id;
+  genes[j][GEN.PERIODO_FIN_ID] = tmp.periodo_fin_id;
+  genes[j][GEN.DIA_HORARIO_ID] = tmp.dia_horario_id;
+  genes[j][GEN.DIST_MARTES_INICIO_ID] = tmp.dist_martes_inicio;
+  genes[j][GEN.DIST_MARTES_FIN_ID] = tmp.dist_martes_fin;
+  genes[j][GEN.DIST_JUEVES_INICIO_ID] = tmp.dist_jueves_inicio;
+  genes[j][GEN.DIST_JUEVES_FIN_ID] = tmp.dist_jueves_fin;
+  genes[j][GEN.DIST_MARTES_NUM_PERIODOS] = tmp.dist_martes_num;
+  genes[j][GEN.DIST_JUEVES_NUM_PERIODOS] = tmp.dist_jueves_num;
 }
  
 // -------------------- MUTACIÓN POR REINSERCIÓN ALEATORIA ----------------------------
  
-function mutacionReisercion(individuo, tasa, ctx) {
+function mutacionReisercion(individuo, ctx) {
   for (let i = 0; i < individuo.genes.length; i++) {
-    if (Math.random() >= tasa) continue;
-
     const gen = individuo.genes[i];
-    const numPeriodos = gen.es_laboratorio ? 3 : 1;
+    const numPeriodos = esLaboratorio(gen) ? 3 : 1;
 
     // 1. Nuevo docente
-    if (!gen.docente_fijo_id) {
-      const posiblesLab = gen.es_laboratorio
-        ? (ctx.docentesCursoLab[gen.curso_id] ?? []) : [];
-      const posibles = gen.es_laboratorio
-        ? (posiblesLab.length > 0 ? posiblesLab : ctx.docentesCurso[gen.curso_id] ?? [])
-        : (ctx.docentesCurso[gen.curso_id] ?? []);
+    if (!gen[GEN.DOCENTE_FIJO_ID]) {
+      const posiblesLab = esLaboratorio(gen)
+        ? (ctx.docentesCursoLab[gen[GEN.CURSO_ID]] ?? []) : [];
+      const posibles = esLaboratorio(gen)
+        ? (posiblesLab.length > 0 ? posiblesLab : ctx.docentesCurso[gen[GEN.CURSO_ID]] ?? [])
+        : (ctx.docentesCurso[gen[GEN.CURSO_ID]] ?? []);
 
       // Respetar relación si existe, si no usar cualquier docente
-      const candidatos = posibles.length > 0
-        ? posibles
-        : ctx.docentes.map(d => d.id);
+          const candidatos = posibles.length > 0
+            ? posibles
+            : ctx.docentes.map(d => d.id);
 
-      const nuevo = elegirAlAzar(candidatos);
-      if (nuevo) gen.docente_id = nuevo;
+          const nuevo = elegirAlAzar(candidatos);
+          if (nuevo) gen[GEN.DOCENTE_ID] = docenteIndexFromId(ctx, nuevo);
     }
 
     // 2. Nuevo periodo y distribucion_lab
-    if (!gen.periodo_fijo_inicio_id) {
-      if (gen.es_laboratorio) {
+    if (!gen[GEN.PERIODO_FIJO_INICIO_ID]) {
+      if (esLaboratorio(gen)) {
         // Recalcular distribución completa para el lab
         const metadataLab = {
-          puede_manana: gen.puede_manana,
-          puede_tarde: gen.puede_tarde,
-          curso_id: gen.curso_id,
+          puede_manana: gen[GEN.PUEDE_MANANA],
+          puede_tarde: gen[GEN.PUEDE_TARDE],
+          curso_id: gen[GEN.CURSO_ID],
         };
-        gen.distribucion_lab = generarDistribucionLab(metadataLab, ctx, gen.docente_id);
+        const distribucion = generarDistribucionLab(metadataLab, ctx, gen[GEN.DOCENTE_ID]);
+        setDistribucionLab(gen, distribucion);
 
-        gen.periodo_inicio_id =
-          gen.distribucion_lab.martes.periodo_inicio_id ??
-          gen.distribucion_lab.jueves.periodo_inicio_id ??
-          gen.periodo_inicio_id;
+        gen[GEN.PERIODO_INICIO_ID] =
+          gen[GEN.DIST_MARTES_INICIO_ID] ??
+          gen[GEN.DIST_JUEVES_INICIO_ID] ??
+          gen[GEN.PERIODO_INICIO_ID];
 
-        gen.periodo_fin_id =
-          gen.distribucion_lab.jueves.periodo_fin_id ??
-          gen.distribucion_lab.martes.periodo_fin_id ??
-          gen.periodo_fin_id;
+        gen[GEN.PERIODO_FIN_ID] =
+          gen[GEN.DIST_JUEVES_FIN_ID] ??
+          gen[GEN.DIST_MARTES_FIN_ID] ??
+          gen[GEN.PERIODO_FIN_ID];
 
       } else {
         const validos = periodosValidos(
-          ctx, gen.puede_manana, gen.puede_tarde, gen.docente_id, numPeriodos
+          ctx, gen[GEN.PUEDE_MANANA], gen[GEN.PUEDE_TARDE], gen[GEN.DOCENTE_ID], numPeriodos
         );
         const nuevo = elegirAlAzar(validos);
         if (nuevo) {
-          gen.periodo_inicio_id = nuevo.id;
-          gen.periodo_fin_id = calcularPeriodoFin(ctx, nuevo.id, numPeriodos);
+          gen[GEN.PERIODO_INICIO_ID] = periodoIndexFromId(ctx, nuevo.id);
+          gen[GEN.PERIODO_FIN_ID] = periodoIndexFromId(ctx, calcularPeriodoFin(ctx, nuevo.id, numPeriodos));
         }
       }
     }
 
     // 3. Nuevo salón
-    if (!gen.salon_fijo_id && !gen.sin_salon) {
-      const validos = salonesValidos(ctx, gen.es_laboratorio, gen.periodo_inicio_id);
+    if (!gen[GEN.SALON_FIJO_ID] && !gen[GEN.SIN_SALON]) {
+      const validos = salonesValidos(ctx, esLaboratorio(gen), gen[GEN.PERIODO_INICIO_ID]);
 
       // Filtrar salones ya usados en este slot por otros genes del individuo
       const salonesOcupados = new Set(
         individuo.genes
           .filter(g => g !== gen &&
-            g.salon_id &&
-            g.dia_horario_id === gen.dia_horario_id &&
-            g.periodo_inicio_id === gen.periodo_inicio_id)
-          .map(g => g.salon_id)
+            g[GEN.SALON_ID] &&
+            g[GEN.DIA_HORARIO_ID] === gen[GEN.DIA_HORARIO_ID] &&
+            g[GEN.PERIODO_INICIO_ID] === gen[GEN.PERIODO_INICIO_ID])
+          .map(g => g[GEN.SALON_ID])
       );
 
       const validosLibres = validos.filter(s => !salonesOcupados.has(s.id));
       const pool = validosLibres.length > 0 ? validosLibres : validos;
       const nuevo = elegirAlAzar(pool);
-      if (nuevo) gen.salon_id = nuevo.id;
+      if (nuevo) gen[GEN.SALON_ID] = salonIndexFromId(ctx, nuevo.id);
     }
 
     // 4. Día (fijo por tipo: LMV para cursos, MarJue para labs)
-    if (!gen.dia_horario_fijo_id) {
-      gen.dia_horario_id = gen.es_laboratorio ? 2 : 1;
+    if (!gen[GEN.DIA_HORARIO_FIJO_ID]) {
+      gen[GEN.DIA_HORARIO_ID] = esLaboratorio(gen) ? 2 : 1;
     }
   }
 
@@ -166,12 +181,12 @@ function mutacionReisercion(individuo, tasa, ctx) {
 
 // ------------------- FUNCION UNIFICADA --------------
 
-function mutar(individuo, metodo = 'intercambio', tasa = 0.05, ctx = null) {
+function mutar(individuo, metodo = 'intercambio', _tasa = 0.05, ctx = null) {
   if (metodo === 'reisercion') {
     if (!ctx) throw new Error('mutar: ctx es requerido para método reisercion');
-    return mutacionReisercion(individuo, tasa, ctx);
+    return mutacionReisercion(individuo, ctx);
   }
-  return mutacionIntercambio(individuo, tasa);
+  return mutacionIntercambio(individuo);
 }
  
 // -------------------- HELPERS --------------
