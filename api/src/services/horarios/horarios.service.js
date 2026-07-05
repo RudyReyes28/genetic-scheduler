@@ -2,6 +2,7 @@
 const db                 = require('../../db');
 const { evaluarAptitud } = require('../../genetico/aptitud');
 const { cargarContexto } = require('../../genetico/contexto');
+const { GEN }            = require('../../genetico/genoma');
 
  
 // ----------------- LISTAR --------------------
@@ -293,6 +294,47 @@ async function eliminar(id) {
  * Para labs con distribución partido (2 filas en BD),
  * reconstruye el distribucion_lab agrupando por seccion_lab_id.
  */
+ 
+// ----------- HELPERS -----------
+
+/**
+ * Convierte un gen objeto a gen array compacto usando los índices de GEN
+ */
+function genObjToArray(genObj) {
+  const arr = new Array(GEN.LENGTH).fill(null);
+  arr[GEN.SECCION_ID]           = genObj.seccion_id ?? null;
+  arr[GEN.SECCION_LAB_ID]        = genObj.seccion_lab_id ?? null;
+  arr[GEN.SALON_ID]              = genObj.salon_id ?? null;
+  arr[GEN.DOCENTE_ID]            = genObj.docente_id ?? null;
+  arr[GEN.PERIODO_INICIO_ID]     = genObj.periodo_inicio_id ?? null;
+  arr[GEN.PERIODO_FIN_ID]        = genObj.periodo_fin_id ?? null;
+  arr[GEN.DIA_HORARIO_ID]        = genObj.dia_horario_id ?? null;
+  arr[GEN.ES_LABORATORIO]        = genObj.es_laboratorio ? 1 : 0;
+  arr[GEN.SIN_SALON]             = genObj.sin_salon ? 1 : 0;
+  arr[GEN.CURSO_ID]              = genObj.curso_id ?? null;
+  arr[GEN.SEMESTRE]              = genObj.semestre ?? null;
+  arr[GEN.CARRERA_ID]            = genObj.carrera_id ?? null;
+  arr[GEN.TIPO]                  = genObj.tipo === 'obligatorio' ? 0 : 1; // 0=TIPO_OBLIGATORIO, 1=TIPO_OPTATIVO
+  arr[GEN.PUEDE_MANANA]          = genObj.puede_manana ? 1 : 0;
+  arr[GEN.PUEDE_TARDE]           = genObj.puede_tarde ? 1 : 0;
+  arr[GEN.NUM_ESTUDIANTES]       = genObj.num_estudiantes ?? null;
+  arr[GEN.SALON_FIJO_ID]         = genObj.salon_fijo_id ?? null;
+  arr[GEN.DOCENTE_FIJO_ID]       = genObj.docente_fijo_id ?? null;
+  arr[GEN.PERIODO_FIJO_INICIO_ID] = genObj.periodo_fijo_inicio_id ?? null;
+  arr[GEN.DIA_HORARIO_FIJO_ID]   = genObj.dia_horario_fijo_id ?? null;
+  // Distribución lab si existe
+  if (genObj.distribucion_lab) {
+    const dist = genObj.distribucion_lab;
+    arr[GEN.DIST_MARTES_NUM_PERIODOS]  = dist.martes?.num_periodos ?? 0;
+    arr[GEN.DIST_MARTES_INICIO_ID]     = dist.martes?.periodo_inicio_id ?? null;
+    arr[GEN.DIST_MARTES_FIN_ID]        = dist.martes?.periodo_fin_id ?? null;
+    arr[GEN.DIST_JUEVES_NUM_PERIODOS]  = dist.jueves?.num_periodos ?? 0;
+    arr[GEN.DIST_JUEVES_INICIO_ID]     = dist.jueves?.periodo_inicio_id ?? null;
+    arr[GEN.DIST_JUEVES_FIN_ID]        = dist.jueves?.periodo_fin_id ?? null;
+  }
+  return arr;
+}
+
 async function reconstruirIndividuo(horarioId) {
   const { rows } = await db.query(`
     SELECT
@@ -389,24 +431,25 @@ async function reconstruirIndividuo(horarioId) {
     curso_id:          r.curso_id,
   }));
  
-  return { genes: [...genesCursos, ...genesLabs], aptitud: null };
+  return { genes: [...genesCursos, ...genesLabs].map(genObjToArray), aptitud: null };
 }
  
 function calcularPorcentajeContinuidad(genes) {
+  const TIPO_OBLIGATORIO = 0;
   const grupos = {};
   for (const gen of genes) {
-    if (gen.tipo !== 'obligatorio' || !gen.semestre || !gen.carrera_id) continue;
-    const key = `${gen.semestre}-${gen.carrera_id}-${gen.dia_horario_id}`;
+    if (gen[GEN.TIPO] !== TIPO_OBLIGATORIO || !gen[GEN.SEMESTRE] || !gen[GEN.CARRERA_ID]) continue;
+    const key = `${gen[GEN.SEMESTRE]}-${gen[GEN.CARRERA_ID]}-${gen[GEN.DIA_HORARIO_ID]}`;
     if (!grupos[key]) grupos[key] = [];
     grupos[key].push(gen);
   }
   let totalPares = 0, paresConsecutivos = 0;
   for (const grupo of Object.values(grupos)) {
     if (grupo.length < 2) continue;
-    grupo.sort((a, b) => a.periodo_inicio_id - b.periodo_inicio_id);
+    grupo.sort((a, b) => a[GEN.PERIODO_INICIO_ID] - b[GEN.PERIODO_INICIO_ID]);
     for (let i = 0; i < grupo.length - 1; i++) {
       totalPares++;
-      if (grupo[i].periodo_fin_id + 1 === grupo[i + 1].periodo_inicio_id) paresConsecutivos++;
+      if (grupo[i][GEN.PERIODO_FIN_ID] + 1 === grupo[i + 1][GEN.PERIODO_INICIO_ID]) paresConsecutivos++;
     }
   }
   if (totalPares === 0) return 100;

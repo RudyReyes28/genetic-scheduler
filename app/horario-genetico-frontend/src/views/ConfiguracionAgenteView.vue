@@ -89,7 +89,7 @@
 
           <div class="form-group">
             <label>Tasa mutación</label>
-            <input type="number" step="0.01" min="0" v-model.number="form.tasa_mutacion" required />
+            <input type="number" step="0.001" min="0" v-model.number="form.tasa_mutacion" required />
           </div>
 
           <div class="form-group">

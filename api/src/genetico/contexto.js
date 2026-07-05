@@ -61,10 +61,33 @@ async function cargarContexto() {
     if (rel.puede_laboratorio) docentesCursoLab[rel.curso_id].push(rel.docente_id);
   }
 
+  const periodosById = Object.fromEntries(periodos.rows.map(periodo => [periodo.id, periodo]));
+  const salonesById = Object.fromEntries(salones.rows.map(salon => [salon.id, salon]));
+  const docentesById = Object.fromEntries(docentes.rows.map(docente => [docente.id, docente]));
+
+  // Índices para compactación: id -> índice en los arrays por orden cargado
+  const periodosIndexById = Object.fromEntries(periodos.rows.map((periodo, i) => [periodo.id, i]));
+  const salonesIndexById  = Object.fromEntries(salones.rows.map((salon, i) => [salon.id, i]));
+  const docentesIndexById = Object.fromEntries(docentes.rows.map((docente, i) => [docente.id, i]));
+
+  // Arrays accesibles por índice (mismo orden que las filas devueltas)
+  const periodosByIndex = periodos.rows;
+  const salonesByIndex  = salones.rows;
+  const docentesByIndex = docentes.rows;
+
   return {
     periodos:         periodos.rows,
+    periodosById,
+    periodosIndexById,
+    periodosByIndex,
     salones:          salones.rows,
+    salonesById,
+    salonesIndexById,
+    salonesByIndex,
     docentes:         docentes.rows,
+    docentesById,
+    docentesIndexById,
+    docentesByIndex,
     secciones:        secciones.rows,
     labs:             labs.rows,
     docentesCurso,
