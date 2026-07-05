@@ -209,6 +209,19 @@ INSERT INTO carreras (nombre, codigo) VALUES
   ('Ingeniería Industrial',               'INDUSTRIAL');
 
 
+-- ─── Horarios Personales (adición aditiva) ──────────────────────────────────
+-- La clave :estudiante proviene del campo user.ra del frontend (carné USAC).
+-- Se usa seccion_id / seccion_lab_id (estables entre regeneraciones) en lugar
+-- de detalle_id (que cambia al regenerar).
+CREATE TABLE IF NOT EXISTS horarios_personales (
+  id                SERIAL PRIMARY KEY,
+  estudiante        VARCHAR(50) NOT NULL,
+  horario_origen_id INT REFERENCES horarios(id) ON DELETE SET NULL,
+  detalles          JSONB NOT NULL DEFAULT '[]',
+  actualizado       TIMESTAMP DEFAULT NOW(),
+  UNIQUE (estudiante)
+);
+
 INSERT INTO configuracion_algoritmo (
   tamano_poblacion, max_generaciones, aptitud_objetivo,
   tasa_mutacion, metodo_seleccion, metodo_cruce, metodo_mutacion,
