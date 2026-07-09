@@ -28,8 +28,16 @@ const { repararIndividuo, elegirAlAzar,
         periodosValidos, salonesValidos,
         calcularPeriodoFin,
   generarDistribucionLab }          = require('./cromosoma');
-const { GEN, esLaboratorio, setDistribucionLab,
-        periodoIndexFromId, salonIndexFromId, docenteIndexFromId } = require('./genoma');
+const { 
+  GEN, 
+  esLaboratorio, 
+  setDistribucionLab,
+  periodoIndexFromId, 
+  salonIndexFromId, 
+  docenteIndexFromId,
+  docenteIdFromIndex,
+  periodoIdFromIndex
+} = require('./genoma');
  
 // ----------------------- MUTACIÓN POR INTERCAMBIO ----------------------------
  
@@ -93,92 +101,92 @@ function intercambiarAsignacion(genes, i, j) {
 }
  
 // -------------------- MUTACIÓN POR REINSERCIÓN ALEATORIA ----------------------------
- 
 function mutacionReisercion(individuo, ctx) {
-  for (let i = 0; i < individuo.genes.length; i++) {
-    const gen = individuo.genes[i];
-    const numPeriodos = esLaboratorio(gen) ? 3 : 1;
+  // CORRECCIÓN LÓGICA: Elegir UN SOLO GEN al azar para mutar, no destruimos todo el individuo.
+  const i = Math.floor(Math.random() * individuo.genes.length);
+  const gen = individuo.genes[i];
+  const numPeriodos = esLaboratorio(gen) ? 3 : 1;
 
-    // 1. Nuevo docente
-    if (!gen[GEN.DOCENTE_FIJO_ID]) {
-      const posiblesLab = esLaboratorio(gen)
-        ? (ctx.docentesCursoLab[gen[GEN.CURSO_ID]] ?? []) : [];
-      const posibles = esLaboratorio(gen)
-        ? (posiblesLab.length > 0 ? posiblesLab : ctx.docentesCurso[gen[GEN.CURSO_ID]] ?? [])
-        : (ctx.docentesCurso[gen[GEN.CURSO_ID]] ?? []);
+  // 1. Nuevo docente
+  if (!gen[GEN.DOCENTE_FIJO_ID]) {
+    const posiblesLab = esLaboratorio(gen)
+      ? (ctx.docentesCursoLab[gen[GEN.CURSO_ID]] ?? []) : [];
+    const posibles = esLaboratorio(gen)
+      ? (posiblesLab.length > 0 ? posiblesLab : ctx.docentesCurso[gen[GEN.CURSO_ID]] ?? [])
+      : (ctx.docentesCurso[gen[GEN.CURSO_ID]] ?? []);
 
-      // Respetar relación si existe, si no usar cualquier docente
-          const candidatos = posibles.length > 0
-            ? posibles
-            : ctx.docentes.map(d => d.id);
+    const candidatos = posibles.length > 0 ? posibles : ctx.docentes.map(d => d.id);
+    const nuevo = elegirAlAzar(candidatos);
+    if (nuevo) gen[GEN.DOCENTE_ID] = docenteIndexFromId(ctx, nuevo);
+  }
 
-          const nuevo = elegirAlAzar(candidatos);
-          if (nuevo) gen[GEN.DOCENTE_ID] = docenteIndexFromId(ctx, nuevo);
-    }
-
-    // 2. Nuevo periodo y distribucion_lab
-    if (!gen[GEN.PERIODO_FIJO_INICIO_ID]) {
-      if (esLaboratorio(gen)) {
-        // Recalcular distribución completa para el lab
-        const metadataLab = {
-          puede_manana: gen[GEN.PUEDE_MANANA],
-          puede_tarde: gen[GEN.PUEDE_TARDE],
-          curso_id: gen[GEN.CURSO_ID],
-        };
-        const distribucion = generarDistribucionLab(metadataLab, ctx, gen[GEN.DOCENTE_ID]);
-        setDistribucionLab(gen, distribucion);
-
-        gen[GEN.PERIODO_INICIO_ID] =
-          gen[GEN.DIST_MARTES_INICIO_ID] ??
-          gen[GEN.DIST_JUEVES_INICIO_ID] ??
-          gen[GEN.PERIODO_INICIO_ID];
-
-        gen[GEN.PERIODO_FIN_ID] =
-          gen[GEN.DIST_JUEVES_FIN_ID] ??
-          gen[GEN.DIST_MARTES_FIN_ID] ??
-          gen[GEN.PERIODO_FIN_ID];
-
-      } else {
-        const validos = periodosValidos(
-          ctx, gen[GEN.PUEDE_MANANA], gen[GEN.PUEDE_TARDE], gen[GEN.DOCENTE_ID], numPeriodos
-        );
-        const nuevo = elegirAlAzar(validos);
-        if (nuevo) {
-          gen[GEN.PERIODO_INICIO_ID] = periodoIndexFromId(ctx, nuevo.id);
-          gen[GEN.PERIODO_FIN_ID] = periodoIndexFromId(ctx, calcularPeriodoFin(ctx, nuevo.id, numPeriodos));
+  // 2. Nuevo periodo y distribucion_lab
+  if (!gen[GEN.PERIODO_FIJO_INICIO_ID]) {
+    if (esLaboratorio(gen)) {
+      const metadataLab = {
+        puede_manana: gen[GEN.PUEDE_MANANA],
+        puede_tarde: gen[GEN.PUEDE_TARDE],
+        curso_id: gen[GEN.CURSO_ID],
+      };
+      
+      // CORRECCIÓN: Pasar ID real del docente
+      const docenteIdReal = docenteIdFromIndex(ctx, gen[GEN.DOCENTE_ID]);
+      const distribucion = generarDistribucionLab(metadataLab, ctx, docenteIdReal);
+      
+      // CORRECCIÓN: Convertir la distribución a índices ANTES de guardarla
+      const distribIdx = {
+        martes: {
+          num_periodos: distribucion.martes.num_periodos,
+          periodo_inicio_id: distribucion.martes.periodo_inicio_id ? periodoIndexFromId(ctx, distribucion.martes.periodo_inicio_id) : null,
+          periodo_fin_id: distribucion.martes.periodo_fin_id ? periodoIndexFromId(ctx, distribucion.martes.periodo_fin_id) : null,
+        },
+        jueves: {
+          num_periodos: distribucion.jueves.num_periodos,
+          periodo_inicio_id: distribucion.jueves.periodo_inicio_id ? periodoIndexFromId(ctx, distribucion.jueves.periodo_inicio_id) : null,
+          periodo_fin_id: distribucion.jueves.periodo_fin_id ? periodoIndexFromId(ctx, distribucion.jueves.periodo_fin_id) : null,
         }
+      };
+      setDistribucionLab(gen, distribIdx);
+
+      gen[GEN.PERIODO_INICIO_ID] = gen[GEN.DIST_MARTES_INICIO_ID] ?? gen[GEN.DIST_JUEVES_INICIO_ID] ?? gen[GEN.PERIODO_INICIO_ID];
+      gen[GEN.PERIODO_FIN_ID] = gen[GEN.DIST_JUEVES_FIN_ID] ?? gen[GEN.DIST_MARTES_FIN_ID] ?? gen[GEN.PERIODO_FIN_ID];
+
+    } else {
+      //  CORRECCIÓN: Pasar ID real del docente
+      const docenteIdReal = docenteIdFromIndex(ctx, gen[GEN.DOCENTE_ID]);
+      const validos = periodosValidos(ctx, gen[GEN.PUEDE_MANANA], gen[GEN.PUEDE_TARDE], docenteIdReal, numPeriodos);
+      const nuevo = elegirAlAzar(validos);
+      if (nuevo) {
+        gen[GEN.PERIODO_INICIO_ID] = periodoIndexFromId(ctx, nuevo.id);
+        gen[GEN.PERIODO_FIN_ID] = periodoIndexFromId(ctx, calcularPeriodoFin(ctx, nuevo.id, numPeriodos));
       }
     }
+  }
 
-    // 3. Nuevo salón
-    if (!gen[GEN.SALON_FIJO_ID] && !gen[GEN.SIN_SALON]) {
-      const validos = salonesValidos(ctx, esLaboratorio(gen), gen[GEN.PERIODO_INICIO_ID]);
+  // 3. Nuevo salón
+  if (!gen[GEN.SALON_FIJO_ID] && !gen[GEN.SIN_SALON]) {
+    const periodoInicioIdReal = periodoIdFromIndex(ctx, gen[GEN.PERIODO_INICIO_ID]);
+    const validos = salonesValidos(ctx, esLaboratorio(gen), periodoInicioIdReal);
 
-      // Filtrar salones ya usados en este slot por otros genes del individuo
-      const salonesOcupados = new Set(
-        individuo.genes
-          .filter(g => g !== gen &&
-            g[GEN.SALON_ID] &&
-            g[GEN.DIA_HORARIO_ID] === gen[GEN.DIA_HORARIO_ID] &&
-            g[GEN.PERIODO_INICIO_ID] === gen[GEN.PERIODO_INICIO_ID])
-          .map(g => g[GEN.SALON_ID])
-      );
+    const salonesOcupados = new Set(
+      individuo.genes
+        .filter(g => g !== gen && g[GEN.SALON_ID] && g[GEN.DIA_HORARIO_ID] === gen[GEN.DIA_HORARIO_ID] && g[GEN.PERIODO_INICIO_ID] === gen[GEN.PERIODO_INICIO_ID])
+        .map(g => g[GEN.SALON_ID])
+    );
 
-      const validosLibres = validos.filter(s => !salonesOcupados.has(s.id));
-      const pool = validosLibres.length > 0 ? validosLibres : validos;
-      const nuevo = elegirAlAzar(pool);
-      if (nuevo) gen[GEN.SALON_ID] = salonIndexFromId(ctx, nuevo.id);
-    }
+    const validosLibres = validos.filter(s => !salonesOcupados.has(s.id));
+    const pool = validosLibres.length > 0 ? validosLibres : validos;
+    const nuevo = elegirAlAzar(pool);
+    if (nuevo) gen[GEN.SALON_ID] = salonIndexFromId(ctx, nuevo.id);
+  }
 
-    // 4. Día (fijo por tipo: LMV para cursos, MarJue para labs)
-    if (!gen[GEN.DIA_HORARIO_FIJO_ID]) {
-      gen[GEN.DIA_HORARIO_ID] = esLaboratorio(gen) ? 2 : 1;
-    }
+  // 4. Día
+  if (!gen[GEN.DIA_HORARIO_FIJO_ID]) {
+    gen[GEN.DIA_HORARIO_ID] = esLaboratorio(gen) ? 2 : 1;
   }
 
   return repararIndividuo(individuo);
 }
-
 // ------------------- FUNCION UNIFICADA --------------
 
 function mutar(individuo, metodo = 'intercambio', _tasa = 0.05, ctx = null) {

@@ -89,7 +89,7 @@ async function ejecutarAG(ctx, onProgreso = null) {
     if (poblacion[0].aptitud > mejorIndividuo.aptitud) {
       const evaluacionMejor = evaluarAptitud(poblacion[0], ctx, true);
       mejorIndividuo = clonarIndividuo(poblacion[0]);
-      mejorConflictos = evaluacionMejor.detalle.filter(d => d.penalizacion).length;
+      mejorConflictos = evaluacionMejor.detalle.reduce((suma, d) => suma + (d.num_conflictos || (d.penalizacion < 0 ? 1 : 0)), 0);
     }
 
     historial.push({ generacion, mejorAptitud: mejorIndividuo.aptitud, conflictos: mejorConflictos });
@@ -139,10 +139,11 @@ async function guardarHorario(mejorIndividuo, stats, nombre = 'Horario generado'
       const bloques = obtenerBloques(gen);
       for (const bloque of bloques) {
         const diaEspecifico = bloque.dia === 2 ? 'martes' : 'jueves';
-        const periodoInicioId = periodoIdFromIndex(ctx, bloque.periodoInicio);
-        const periodoFinId = periodoIdFromIndex(ctx, bloque.periodoFin);
+        const periodoInicioId = bloque.periodoInicio != null ? periodoIdFromIndex(ctx, bloque.periodoInicio) : null;
+        const periodoFinId = bloque.periodoFin != null ? periodoIdFromIndex(ctx, bloque.periodoFin) : null;
         const salonId = salonIdFromIndex(ctx, gen[GEN.SALON_ID]);
         const docenteId = docenteIdFromIndex(ctx, gen[GEN.DOCENTE_ID]);
+        
         await db.query(`
           INSERT INTO horario_detalle
             (horario_id, seccion_id, seccion_lab_id, salon_id, docente_id,
@@ -166,8 +167,11 @@ async function guardarHorario(mejorIndividuo, stats, nombre = 'Horario generado'
       // Curso teórico — una sola fila, dia_especifico null
       const salonId = gen[GEN.SALON_ID] != null ? salonIdFromIndex(ctx, gen[GEN.SALON_ID]) : null;
       const docenteId = gen[GEN.DOCENTE_ID] != null ? docenteIdFromIndex(ctx, gen[GEN.DOCENTE_ID]) : null;
-      const periodoInicioId = periodoIdFromIndex(ctx, gen[GEN.PERIODO_INICIO_ID]);
-      const periodoFinId = periodoIdFromIndex(ctx, gen[GEN.PERIODO_FIN_ID]);
+      
+      // CORRECCIÓN APLICADA: Se usa el gen original y no la variable "bloque" que no existe aquí
+      const periodoInicioId = gen[GEN.PERIODO_INICIO_ID] != null ? periodoIdFromIndex(ctx, gen[GEN.PERIODO_INICIO_ID]) : null;
+      const periodoFinId = gen[GEN.PERIODO_FIN_ID] != null ? periodoIdFromIndex(ctx, gen[GEN.PERIODO_FIN_ID]) : null;
+      
       await db.query(`
         INSERT INTO horario_detalle
           (horario_id, seccion_id, seccion_lab_id, salon_id, docente_id,
@@ -190,5 +194,4 @@ async function guardarHorario(mejorIndividuo, stats, nombre = 'Horario generado'
 
   return horarioId;
 }
-
 module.exports = { ejecutarAG, guardarHorario };

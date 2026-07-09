@@ -63,11 +63,12 @@ function penalizarConflictosDocente(slotDocente, detalle) {
   for (const [key, genes] of Object.entries(slotDocente)) {
     if (genes.length > 1) {
       const conflictos = genes.length - 1;
-      puntaje -= conflictos * 100;
+      puntaje -= conflictos * 10; // Antes 100, ahora 10
       if (detalle) detalle.push({
         tipo: 'conflicto_docente',
         descripcion: `Docente ${genes[0][GEN.DOCENTE_ID]} tiene ${genes.length} asignaciones en slot ${key}`,
-        penalizacion: conflictos * -100,
+        penalizacion: conflictos * -10,
+        num_conflictos: conflictos
       });
     }
   }
@@ -79,12 +80,14 @@ function penalizarConflictosSalon(slotSalon, detalle) {
   for (const [key, genes] of Object.entries(slotSalon)) {
     if (genes.length > 1) {
       const exceso = genes.length - 1;
-      const penalizacion = exceso * 100 + (exceso - 1) * 50;
+      // Antes 100 y 50, ahora 10 y 5
+      const penalizacion = exceso * 10 + (exceso - 1) * 5; 
       puntaje -= penalizacion;
       if (detalle) detalle.push({
         tipo: 'conflicto_salon',
         descripcion: `Salón ${genes[0][GEN.SALON_ID]} tiene ${genes.length} asignaciones en slot ${key}`,
         penalizacion: -penalizacion,
+        num_conflictos: exceso
       });
     }
   }
@@ -99,11 +102,12 @@ function penalizarConflictosSemestre(slotSemestre, detalle) {
     const cursosDistintos = cursos.size;
     if (cursosDistintos > 1) {
       const conflictos = cursosDistintos - 1;
-      puntaje -= conflictos * 80;
+      puntaje -= conflictos * 8; // Antes 80, ahora 8
       if (detalle) detalle.push({
         tipo: 'conflicto_semestre',
         descripcion: `Semestre ${genes[0][GEN.SEMESTRE]} carrera ${genes[0][GEN.CARRERA_ID]} tiene ${cursosDistintos} cursos obligatorios en slot ${key}`,
-        penalizacion: conflictos * -80,
+        penalizacion: conflictos * -8,
+        num_conflictos: conflictos
       });
     }
   }
@@ -120,20 +124,20 @@ function penalizarHorarioIncorrecto(genes, ctx, detalle) {
     if (!periodo) continue;
 
     if (periodo.es_manana && !gen[GEN.PUEDE_MANANA]) {
-      puntaje -= 70;
+      puntaje -= 7; // Antes 70
       if (detalle) detalle.push({
         tipo: 'horario_incorrecto',
         descripcion: `Gen ${nombreGen(gen)} asignado en mañana pero puede_manana=false`,
-        penalizacion: -70,
+        penalizacion: -7,
       });
     }
 
     if (periodo.es_tarde && !gen[GEN.PUEDE_TARDE]) {
-      puntaje -= 70;
+      puntaje -= 7; // Antes 70
       if (detalle) detalle.push({
         tipo: 'horario_incorrecto',
         descripcion: `Gen ${nombreGen(gen)} asignado en tarde pero puede_tarde=false`,
-        penalizacion: -70,
+        penalizacion: -7,
       });
     }
   }
@@ -151,20 +155,20 @@ function penalizarSalonInadecuado(genes, ctx, detalle) {
     if (!salon) continue;
 
     if (!esLaboratorio(gen) && salon.es_laboratorio && !salon.lab_habilitado_teorico) {
-      puntaje -= 60;
+      puntaje -= 6; // Antes 60
       if (detalle) detalle.push({
         tipo: 'salon_inadecuado',
         descripcion: `Curso teórico ${gen[GEN.SECCION_ID]} en laboratorio ${salon.nombre} no habilitado para teóricos`,
-        penalizacion: -60,
+        penalizacion: -6,
       });
     }
 
     if (esLaboratorio(gen) && !salon.es_laboratorio) {
-      puntaje -= 60;
+      puntaje -= 6; // Antes 60
       if (detalle) detalle.push({
         tipo: 'salon_inadecuado',
         descripcion: `Lab ${gen[GEN.SECCION_LAB_ID]} asignado a salón teórico ${salon.nombre}`,
-        penalizacion: -60,
+        penalizacion: -6,
       });
     }
   }
@@ -185,11 +189,11 @@ function penalizarDocenteFueraDeHorario(genes, ctx, detalle) {
     if (!docente || !periodo) continue;
 
     if (periodo.hora_inicio < docente.hora_entrada || periodo.hora_fin > docente.hora_salida) {
-      puntaje -= 50;
+      puntaje -= 5; // Antes 50
       if (detalle) detalle.push({
         tipo: 'docente_fuera_horario',
         descripcion: `Docente ${docente.nombre} asignado fuera de su horario (${periodo.hora_inicio}-${periodo.hora_fin})`,
-        penalizacion: -50,
+        penalizacion: -5,
       });
     }
   }
@@ -207,11 +211,11 @@ function penalizarCapacidadSuperada(genes, ctx, detalle) {
     if (!salon || !salon.capacidad) continue;
 
     if (gen[GEN.NUM_ESTUDIANTES] > salon.capacidad) {
-      puntaje -= 20;
+      puntaje -= 2; // Antes 20
       if (detalle) detalle.push({
         tipo: 'capacidad_superada',
         descripcion: `${gen[GEN.NUM_ESTUDIANTES]} estudiantes en salón ${salon.nombre} (capacidad ${salon.capacidad})`,
-        penalizacion: -20,
+        penalizacion: -2,
       });
     }
   }
@@ -234,11 +238,12 @@ function penalizarDocenteNoAutorizado(genes, ctx, detalle) {
     const docenteId = docenteObj ? docenteObj.id : gen[GEN.DOCENTE_ID];
 
     if (posibles.length > 0 && !posibles.includes(docenteId)) {
-      puntaje -= 90;
+      puntaje -= 9; // Antes 90
       if (detalle) detalle.push({
         tipo: 'docente_no_autorizado',
         descripcion: `Docente ${docenteId} no está autorizado para curso ${gen[GEN.CURSO_ID]}`,
-        penalizacion: -90,
+        penalizacion: -9,
+        num_conflictos: 1
       });
     }
   }
@@ -251,7 +256,6 @@ function penalizarSobreusoPeriodo(genes, detalle) {
 
   for (const gen of genes) {
     if (gen[GEN.SIN_SALON] || esLaboratorio(gen)) continue;
-    // Usar valores crudos; si están null, usaremos "null" en la key (mejor que "undefined")
     const diaHorario = gen[GEN.DIA_HORARIO_ID] ?? 'null';
     const periodoInicio = gen[GEN.PERIODO_INICIO_ID] ?? 'null';
     const key = `${diaHorario}-${periodoInicio}`;
@@ -262,11 +266,12 @@ function penalizarSobreusoPeriodo(genes, detalle) {
   for (const [key, cantidad] of Object.entries(conteo)) {
     if (cantidad > maxSalones) {
       const exceso = cantidad - maxSalones;
-      puntaje -= exceso * 80;
+      puntaje -= exceso * 8; // Antes 80
       if (detalle) detalle.push({
         tipo: 'sobreuso_periodo',
         descripcion: `Slot ${key} tiene ${cantidad} cursos para ${maxSalones} salones`,
-        penalizacion: exceso * -80,
+        penalizacion: exceso * -8,
+        num_conflictos: exceso
       });
     }
   }
@@ -293,11 +298,11 @@ function bonoContinuidadSemestre(genes, detalle) {
     items.sort((a, b) => a.gen[GEN.PERIODO_INICIO_ID] - b.gen[GEN.PERIODO_INICIO_ID]);
     for (let i = 0; i < items.length - 1; i++) {
       if (items[i].gen[GEN.PERIODO_FIN_ID] + 1 === items[i + 1].gen[GEN.PERIODO_INICIO_ID]) {
-        puntaje += 30;
+        puntaje += 3; // Antes 30
         if (detalle) detalle.push({
           tipo: 'continuidad_semestre',
           descripcion: `Semestre ${items[i].gen[GEN.SEMESTRE]} carrera ${items[i].gen[GEN.CARRERA_ID]}: cursos consecutivos en día ${items[i].dia}`,
-          bono: 30,
+          bono: 3,
         });
       }
     }
@@ -317,11 +322,11 @@ function bonoCapacidadAdecuada(genes, ctx, detalle) {
     if (!salon || !salon.capacidad) continue;
 
     if (gen[GEN.NUM_ESTUDIANTES] <= salon.capacidad) {
-      puntaje += 10;
+      puntaje += 1; // Antes 10
       if (detalle) detalle.push({
         tipo: 'capacidad_adecuada',
         descripcion: `${gen[GEN.NUM_ESTUDIANTES]} estudiantes en salón ${salon.nombre} (capacidad ${salon.capacidad})`,
-        bono: 10,
+        bono: 1,
       });
     }
   }
