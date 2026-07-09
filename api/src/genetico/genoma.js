@@ -93,7 +93,7 @@ function obtenerBloques(gen) {
 
   const bloques = [];
 
-  if (gen[GEN.DIST_MARTES_NUM_PERIODOS] > 0 && gen[GEN.DIST_MARTES_INICIO_ID]) {
+  if (gen[GEN.DIST_MARTES_NUM_PERIODOS] > 0 && gen[GEN.DIST_MARTES_INICIO_ID] != null) {
     bloques.push({
       dia: 2,
       periodoInicio: gen[GEN.DIST_MARTES_INICIO_ID],
@@ -101,7 +101,7 @@ function obtenerBloques(gen) {
     });
   }
 
-  if (gen[GEN.DIST_JUEVES_NUM_PERIODOS] > 0 && gen[GEN.DIST_JUEVES_INICIO_ID]) {
+  if (gen[GEN.DIST_JUEVES_NUM_PERIODOS] > 0 && gen[GEN.DIST_JUEVES_INICIO_ID] != null) {
     bloques.push({
       dia: 4,
       periodoInicio: gen[GEN.DIST_JUEVES_INICIO_ID],
