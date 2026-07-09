@@ -1,10 +1,8 @@
-
 const db                 = require('../../db');
 const { evaluarAptitud } = require('../../genetico/aptitud');
 const { cargarContexto } = require('../../genetico/contexto');
 const { GEN }            = require('../../genetico/genoma');
 
- 
 // ----------------- LISTAR --------------------
  
 async function listar() {
@@ -58,7 +56,6 @@ async function obtener(id, filtros = {}) {
       c.tipo               AS curso_tipo,
       c.carrera_id,
       ca.nombre            AS carrera_nombre,
-      -- Sección: viene directo o a través del lab
       COALESCE(s.letra, s_lab.letra)  AS seccion_letra,
       sa.nombre            AS salon_nombre,
       sa.es_laboratorio    AS salon_es_laboratorio,
@@ -68,7 +65,6 @@ async function obtener(id, filtros = {}) {
       p_ini.es_manana,
       p_ini.es_tarde,
       dh.nombre            AS dias_nombre,
-      -- Día legible: usa dia_especifico si existe, si no el patrón
       COALESCE(hd.dia_especifico, dh.nombre) AS dia_display,
       CASE WHEN hd.seccion_lab_id IS NOT NULL THEN true ELSE false END AS es_laboratorio
     FROM horario_detalle hd
@@ -103,18 +99,23 @@ async function getConflictos(id) {
     throw err;
   }
 
-  const individuo = await reconstruirIndividuo(id);
+  //  CARGAMOS CONTEXTO ANTES
+  const ctx = await cargarContexto();
+  
+  // PASAMOS CTX PARA TRADUCIR
+  const individuo = await reconstruirIndividuo(id, ctx);
   if (!individuo) {
     const err = new Error('Horario no encontrado');
     err.status = 404;
     throw err;
   }
-  const ctx = await cargarContexto();
+  
   const { aptitud, detalle } = evaluarAptitud(individuo, ctx, true);
+  
   return {
     aptitud: Number(horario.aptitud_final),
     aptitud_recalculada: aptitud,
-    total_conflictos:   detalle.filter(d => d.penalizacion).length,
+    total_conflictos:   detalle.filter(d => d.penalizacion).reduce((s, d) => s + (d.num_conflictos || 1), 0),
     total_penalizacion: detalle.filter(d => d.penalizacion).reduce((s, d) => s + d.penalizacion, 0),
     total_bonos:        detalle.filter(d => d.bono).reduce((s, d) => s + d.bono, 0),
     conflictos:         detalle.filter(d => d.penalizacion),
@@ -132,13 +133,15 @@ async function getReporte(id) {
     throw err;
   }
  
-  const individuo = await reconstruirIndividuo(id);
+  //  CARGAMOS CONTEXTO ANTES Y PASAMOS A RECONSTRUIR
   const ctx       = await cargarContexto();
+  const individuo = await reconstruirIndividuo(id, ctx);
   const { aptitud, detalle } = evaluarAptitud(individuo, ctx, true);
  
   const conflictosList    = detalle.filter(d => d.penalizacion);
+  const totalConflictos   = conflictosList.reduce((s, d) => s + (d.num_conflictos || 1), 0);
   const conflictosPorTipo = conflictosList.reduce((acc, c) => {
-    acc[c.tipo] = (acc[c.tipo] ?? 0) + 1;
+    acc[c.tipo] = (acc[c.tipo] ?? 0) + (c.num_conflictos || 1);
     return acc;
   }, {});
  
@@ -163,7 +166,7 @@ async function getReporte(id) {
     generaciones_ejecutadas: horario.generaciones_ejecutadas,
     tiempo_ejecucion_ms:     horario.tiempo_ejecucion_ms,
     tiempo_ejecucion_seg:    (horario.tiempo_ejecucion_ms / 1000).toFixed(2),
-    total_conflictos:        conflictosList.length,
+    total_conflictos:        totalConflictos,
     conflictos_por_tipo:     conflictosPorTipo,
     lista_conflictos:        conflictosList,
     porcentaje_continuidad:  calcularPorcentajeContinuidad(individuo.genes),
@@ -190,7 +193,6 @@ async function exportarCSV(id) {
       ca.nombre                                           AS carrera,
       COALESCE(s.letra, s_lab.letra)                      AS seccion,
       d.nombre                                            AS docente,
-      -- Día: usa dia_especifico si existe (labs partido), si no el patrón
       COALESCE(
         INITCAP(hd.dia_especifico),
         dh.nombre
@@ -263,8 +265,9 @@ async function editarDetalle(horarioId, detalleId, cambios) {
     detalleId,
   ]);
  
-  const individuo = await reconstruirIndividuo(horarioId);
+  //  CARGAMOS CONTEXTO ANTES Y PASAMOS A RECONSTRUIR
   const ctx       = await cargarContexto();
+  const individuo = await reconstruirIndividuo(horarioId, ctx);
   const { aptitud, detalle: detalleAptitud } = evaluarAptitud(individuo, ctx, true);
  
   return {
@@ -287,55 +290,54 @@ async function eliminar(id) {
   return { mensaje: `Horario ${id} eliminado correctamente` };
 }
  
-// ----------- HELPERS --------------
- 
-/**
- * Reconstruye un individuo desde horario_detalle.
- * Para labs con distribución partido (2 filas en BD),
- * reconstruye el distribucion_lab agrupando por seccion_lab_id.
- */
- 
 // ----------- HELPERS -----------
 
 /**
- * Convierte un gen objeto a gen array compacto usando los índices de GEN
+ * Convierte un gen objeto a gen array compacto y TRADUCE los IDs a Índices
  */
-function genObjToArray(genObj) {
+function genObjToArray(genObj, ctx) {
   const arr = new Array(GEN.LENGTH).fill(null);
-  arr[GEN.SECCION_ID]           = genObj.seccion_id ?? null;
+  arr[GEN.SECCION_ID]            = genObj.seccion_id ?? null;
   arr[GEN.SECCION_LAB_ID]        = genObj.seccion_lab_id ?? null;
-  arr[GEN.SALON_ID]              = genObj.salon_id ?? null;
-  arr[GEN.DOCENTE_ID]            = genObj.docente_id ?? null;
-  arr[GEN.PERIODO_INICIO_ID]     = genObj.periodo_inicio_id ?? null;
-  arr[GEN.PERIODO_FIN_ID]        = genObj.periodo_fin_id ?? null;
+  
+  //  TRADUCCIÓN : De ID de BD -> a Índice de Arreglo
+  arr[GEN.SALON_ID]              = genObj.salon_id != null ? (ctx.salonesIndexById[genObj.salon_id] ?? null) : null;
+  arr[GEN.DOCENTE_ID]            = genObj.docente_id != null ? (ctx.docentesIndexById[genObj.docente_id] ?? null) : null;
+  arr[GEN.PERIODO_INICIO_ID]     = genObj.periodo_inicio_id != null ? (ctx.periodosIndexById[genObj.periodo_inicio_id] ?? null) : null;
+  arr[GEN.PERIODO_FIN_ID]        = genObj.periodo_fin_id != null ? (ctx.periodosIndexById[genObj.periodo_fin_id] ?? null) : null;
+  
   arr[GEN.DIA_HORARIO_ID]        = genObj.dia_horario_id ?? null;
   arr[GEN.ES_LABORATORIO]        = genObj.es_laboratorio ? 1 : 0;
   arr[GEN.SIN_SALON]             = genObj.sin_salon ? 1 : 0;
   arr[GEN.CURSO_ID]              = genObj.curso_id ?? null;
   arr[GEN.SEMESTRE]              = genObj.semestre ?? null;
   arr[GEN.CARRERA_ID]            = genObj.carrera_id ?? null;
-  arr[GEN.TIPO]                  = genObj.tipo === 'obligatorio' ? 0 : 1; // 0=TIPO_OBLIGATORIO, 1=TIPO_OPTATIVO
+  arr[GEN.TIPO]                  = genObj.tipo === 'obligatorio' ? 0 : 1; 
   arr[GEN.PUEDE_MANANA]          = genObj.puede_manana ? 1 : 0;
   arr[GEN.PUEDE_TARDE]           = genObj.puede_tarde ? 1 : 0;
   arr[GEN.NUM_ESTUDIANTES]       = genObj.num_estudiantes ?? null;
+  
   arr[GEN.SALON_FIJO_ID]         = genObj.salon_fijo_id ?? null;
   arr[GEN.DOCENTE_FIJO_ID]       = genObj.docente_fijo_id ?? null;
   arr[GEN.PERIODO_FIJO_INICIO_ID] = genObj.periodo_fijo_inicio_id ?? null;
   arr[GEN.DIA_HORARIO_FIJO_ID]   = genObj.dia_horario_fijo_id ?? null;
-  // Distribución lab si existe
+  
+  //  TRADUCCIÓN DE LABS
   if (genObj.distribucion_lab) {
     const dist = genObj.distribucion_lab;
     arr[GEN.DIST_MARTES_NUM_PERIODOS]  = dist.martes?.num_periodos ?? 0;
-    arr[GEN.DIST_MARTES_INICIO_ID]     = dist.martes?.periodo_inicio_id ?? null;
-    arr[GEN.DIST_MARTES_FIN_ID]        = dist.martes?.periodo_fin_id ?? null;
+    arr[GEN.DIST_MARTES_INICIO_ID]     = dist.martes?.periodo_inicio_id != null ? (ctx.periodosIndexById[dist.martes.periodo_inicio_id] ?? null) : null;
+    arr[GEN.DIST_MARTES_FIN_ID]        = dist.martes?.periodo_fin_id != null ? (ctx.periodosIndexById[dist.martes.periodo_fin_id] ?? null) : null;
+    
     arr[GEN.DIST_JUEVES_NUM_PERIODOS]  = dist.jueves?.num_periodos ?? 0;
-    arr[GEN.DIST_JUEVES_INICIO_ID]     = dist.jueves?.periodo_inicio_id ?? null;
-    arr[GEN.DIST_JUEVES_FIN_ID]        = dist.jueves?.periodo_fin_id ?? null;
+    arr[GEN.DIST_JUEVES_INICIO_ID]     = dist.jueves?.periodo_inicio_id != null ? (ctx.periodosIndexById[dist.jueves.periodo_inicio_id] ?? null) : null;
+    arr[GEN.DIST_JUEVES_FIN_ID]        = dist.jueves?.periodo_fin_id != null ? (ctx.periodosIndexById[dist.jueves.periodo_fin_id] ?? null) : null;
   }
   return arr;
 }
 
-async function reconstruirIndividuo(horarioId) {
+// Añadimos "ctx" como parámetro
+async function reconstruirIndividuo(horarioId, ctx) {
   const { rows } = await db.query(`
     SELECT
       hd.id, hd.seccion_id, hd.seccion_lab_id,
@@ -358,11 +360,9 @@ async function reconstruirIndividuo(horarioId) {
  
   if (rows.length === 0) return null;
  
-  // Separar filas de cursos y filas de labs
   const filasCursos = rows.filter(r => !r.es_laboratorio);
   const filasLabs   = rows.filter(r => r.es_laboratorio);
  
-  // Agrupar filas de labs por seccion_lab_id para reconstruir distribucion_lab
   const labsAgrupados = {};
   for (const fila of filasLabs) {
     const key = fila.seccion_lab_id;
@@ -374,7 +374,6 @@ async function reconstruirIndividuo(horarioId) {
     const filaMartes = filas.find(f => f.dia_especifico === 'martes');
     const filaJueves = filas.find(f => f.dia_especifico === 'jueves');
  
-    // Si no hay dia_especifico (horario viejo sin distribucion), tratar como un bloque
     const sinDistribucion = filas.every(f => !f.dia_especifico);
  
     const distribucion_lab = sinDistribucion ? null : {
@@ -431,7 +430,8 @@ async function reconstruirIndividuo(horarioId) {
     curso_id:          r.curso_id,
   }));
  
-  return { genes: [...genesCursos, ...genesLabs].map(genObjToArray), aptitud: null };
+  //  Mapeamos enviando 'ctx' a la función de traducción
+  return { genes: [...genesCursos, ...genesLabs].map(g => genObjToArray(g, ctx)), aptitud: null };
 }
  
 function calcularPorcentajeContinuidad(genes) {

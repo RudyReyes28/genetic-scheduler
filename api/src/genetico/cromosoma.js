@@ -135,7 +135,7 @@ function generarGenSeccion(seccion, ctx, genesYaAsignados = []) {
   gen[GEN.SALON_ID] = salon_id ? salonIndexFromId(ctx, salon_id) : null;
   gen[GEN.DOCENTE_ID] = docente_id ? docenteIndexFromId(ctx, docente_id) : null;
   gen[GEN.PERIODO_INICIO_ID] = periodo_inicio_id ? periodoIndexFromId(ctx, periodo_inicio_id) : null;
-  gen[GEN.PERIODO_FIN_ID] = periodoIndexFromId(ctx, periodo_inicio_id);
+  gen[GEN.PERIODO_FIN_ID] = gen[GEN.PERIODO_INICIO_ID];
   gen[GEN.DIA_HORARIO_ID] = dia_horario_id;
   gen[GEN.ES_LABORATORIO] = 0;
   gen[GEN.SIN_SALON] = seccion.sin_salon ? 1 : 0;
@@ -146,9 +146,9 @@ function generarGenSeccion(seccion, ctx, genesYaAsignados = []) {
   gen[GEN.PUEDE_MANANA] = seccion.puede_manana ? 1 : 0;
   gen[GEN.PUEDE_TARDE] = seccion.puede_tarde ? 1 : 0;
   gen[GEN.NUM_ESTUDIANTES] = seccion.num_estudiantes ?? null;
-  gen[GEN.SALON_FIJO_ID] = seccion.salon_fijo_id ?? null;
-  gen[GEN.DOCENTE_FIJO_ID] = seccion.docente_fijo_id ?? null;
-  gen[GEN.PERIODO_FIJO_INICIO_ID] = seccion.periodo_fijo_inicio_id ?? null;
+  gen[GEN.SALON_FIJO_ID] = seccion.salon_fijo_id ? salonIndexFromId(ctx, seccion.salon_fijo_id) : null;
+  gen[GEN.DOCENTE_FIJO_ID] = seccion.docente_fijo_id ? docenteIndexFromId(ctx, seccion.docente_fijo_id) : null;
+  gen[GEN.PERIODO_FIJO_INICIO_ID] = seccion.periodo_fijo_inicio_id ? periodoIndexFromId(ctx, seccion.periodo_fijo_inicio_id) : null;
   gen[GEN.DIA_HORARIO_FIJO_ID] = seccion.dia_horario_fijo_id ?? null;
   return gen;
 }
