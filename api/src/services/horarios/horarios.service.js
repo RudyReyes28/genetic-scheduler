@@ -2,7 +2,8 @@ const db                 = require('../../db');
 const { evaluarAptitud } = require('../../genetico/aptitud');
 const { cargarContexto } = require('../../genetico/contexto');
 const { GEN }            = require('../../genetico/genoma');
-
+const pdfmake = require('pdfmake');
+const path = require('path');
 // ----------------- LISTAR --------------------
  
 async function listar() {
@@ -455,8 +456,275 @@ function calcularPorcentajeContinuidad(genes) {
   if (totalPares === 0) return 100;
   return ((paresConsecutivos / totalPares) * 100).toFixed(1);
 }
+
+const pdfmakePackageJson = require.resolve('pdfmake/package.json');
+const fontsDir = path.join(path.dirname(pdfmakePackageJson), 'fonts', 'Roboto');
+ 
+pdfmake.setFonts({
+  Roboto: {
+    normal: path.join(fontsDir, 'Roboto-Regular.ttf'),
+    bold: path.join(fontsDir, 'Roboto-Medium.ttf'),
+    italics: path.join(fontsDir, 'Roboto-Italic.ttf'),
+    bolditalics: path.join(fontsDir, 'Roboto-MediumItalic.ttf'),
+  },
+});
+ 
+ 
+
+pdfmake.setUrlAccessPolicy(() => false);
+pdfmake.setLocalAccessPolicy((filePath) => filePath.startsWith(fontsDir));
+ 
+// Colores oficiales por carrera (igual que antes)
+const COLORES_CARRERA = {
+  SISTEMAS: '#8bb4e7',
+  CIVIL: '#89c182',
+  MECANICA: '#ff4d4d',
+  INDUSTRIAL: '#ff9900',
+  MEC_INDUSTRIAL: '#ffd966',
+  DEFAULT: '#d9d9d9',
+};
+ 
+const formatearDias = (diasStr) => {
+  if (!diasStr) return '';
+  return diasStr
+    .replace(/Lunes, Mi[eé]rcoles y Viernes/gi, 'Lu-Mi-Vi')
+    .replace(/Martes y Jueves/gi, 'Ma-Ju')
+    .replace(/^Martes$/gi, 'Martes')
+    .replace(/^Jueves$/gi, 'Jueves');
+};
+ 
+
+function construirContenidoCelda(cursosEnCelda) {
+  if (cursosEnCelda.length === 1) {
+    return construirBloqueCurso(cursosEnCelda[0]);
+  }
+ 
+  return {
+    margin: [0, 0, 0, 0],
+    table: {
+      widths: ['*'],
+      heights: cursosEnCelda.map(() => '*'),
+      body: cursosEnCelda.map((curso) => [construirBloqueCurso(curso)]),
+    },
+    layout: {
+      hLineWidth: (i, node) => (i === 0 || i === node.table.body.length ? 0 : 1),
+      vLineWidth: () => 0,
+      hLineColor: () => '#000',
+      paddingLeft: () => 0,
+      paddingRight: () => 0,
+      paddingTop: () => 0,
+      paddingBottom: () => 0,
+    },
+  };
+}
+ 
+/**
+ * Construye el bloque de un solo curso: color de fondo + texto centrado
+ * (equivalente a un .curso-box de la versión HTML).
+ */
+function construirBloqueCurso(curso) {
+  const color = COLORES_CARRERA[curso.carrera_codigo] || COLORES_CARRERA.DEFAULT;
+  const diasAbreviados = formatearDias(curso.dias);
+  const horaTexto = `${curso.hora_inicio.slice(0, 5)} - ${curso.hora_fin.slice(0, 5)}`;
+ 
+  return {
+    fillColor: color,
+    alignment: 'center',
+    margin: [3, 4, 3, 4],
+    stack: [
+      { text: curso.curso, bold: true, fontSize: 7, alignment: 'center', margin: [0, 0, 0, 2] },
+      { text: `Sec: ${curso.seccion} | ${curso.codigo}`, fontSize: 6, alignment: 'center' },
+      { text: curso.docente || 'Sin Docente', fontSize: 6, alignment: 'center' },
+      {
+        text: `${diasAbreviados} | ${horaTexto}`,
+        fontSize: 5.5,
+        bold: true,
+        alignment: 'center',
+        margin: [0, 2, 0, 0],
+      },
+    ],
+  };
+}
+ 
+
+function construirGridPdfMake(datos, salones, periodos, titulo, esPrimeraSeccion) {
+  const celdasOmitidas = {}; // key: `${salon.id}-${periodo.numero}` -> true si está cubierta por un rowSpan de arriba
+ 
+  const headerRow = [
+    { text: 'HORARIO', style: 'headerCell', fillColor: '#eaeaea' },
+    ...salones.map((s) => ({ text: s.nombre, style: 'headerCell' })),
+  ];
+ 
+  const body = [headerRow];
+ 
+  for (const periodo of periodos) {
+    // Franja divisoria negra (equivalente al <tr> de separación en periodo 6)
+    if (periodo.numero === 6) {
+      const filaDivisoria = [
+        {
+          text: '',
+          colSpan: salones.length + 1,
+          fillColor: '#222222',
+          border: [false, false, false, false],
+        },
+      ];
+      for (let i = 0; i < salones.length; i++) filaDivisoria.push({});
+      body.push(filaDivisoria);
+    }
+ 
+    const tiempoTexto = `${periodo.hora_inicio.slice(0, 5)}\n-\n${periodo.hora_fin.slice(0, 5)}`;
+    const fila = [{ text: tiempoTexto, style: 'timeCell', fillColor: '#eaeaea' }];
+ 
+    for (const salon of salones) {
+      const celdaKey = `${salon.id}-${periodo.numero}`;
+ 
+      if (celdasOmitidas[celdaKey]) {
+        // Placeholder obligatorio: esta celda ya está "ocupada" por el
+        // rowSpan de una fila anterior en esta misma columna.
+        fila.push({});
+        continue;
+      }
+ 
+      const cursosEnCelda = datos.filter(
+        (d) => d.salon_id === salon.id && d.periodo_inicio_num === periodo.numero
+      );
+ 
+      if (cursosEnCelda.length > 0) {
+        const maxRowspan = Math.max(
+          ...cursosEnCelda.map((c) => c.periodo_fin_num - c.periodo_inicio_num + 1)
+        );
+ 
+        if (maxRowspan > 1) {
+          for (let i = 1; i < maxRowspan; i++) {
+            celdasOmitidas[`${salon.id}-${periodo.numero + i}`] = true;
+          }
+        }
+ 
+        const celda = construirContenidoCelda(cursosEnCelda);
+        celda.rowSpan = maxRowspan;
+        fila.push(celda);
+      } else {
+        fila.push({ text: '' });
+      }
+    }
+ 
+    body.push(fila);
+  }
+ 
+  const anchoColumnaTiempo = 45;
+  const widths = [anchoColumnaTiempo, ...salones.map(() => '*')];
+ 
+  return [
+    {
+      text: titulo,
+      style: 'tituloSeccion',
+      pageBreak: esPrimeraSeccion ? undefined : 'before',
+    },
+    {
+      table: {
+        headerRows: 1,
+        widths,
+        body,
+      },
+      layout: {
+        hLineWidth: () => 1.5,
+        vLineWidth: () => 1.5,
+        hLineColor: () => '#000',
+        vLineColor: () => '#000',
+        paddingLeft: () => 2,
+        paddingRight: () => 2,
+        paddingTop: () => 2,
+        paddingBottom: () => 2,
+      },
+    },
+  ];
+}
+ 
+async function exportarPDF(id) {
+  const { rows: detalles } = await db.query(
+    `
+    SELECT
+      hd.dia_especifico,
+      COALESCE(INITCAP(hd.dia_especifico), dh.nombre) AS dias,
+      sa.id AS salon_id, sa.nombre AS salon,
+      c.nombre AS curso, c.codigo, ca.codigo AS carrera_codigo,
+      COALESCE(s.letra, s_lab.letra) AS seccion,
+      d.nombre AS docente,
+      p_ini.numero AS periodo_inicio_num,
+      p_fin.numero AS periodo_fin_num,
+      p_ini.hora_inicio,
+      p_fin.hora_fin,
+      CASE WHEN hd.seccion_lab_id IS NOT NULL THEN true ELSE false END AS es_laboratorio
+    FROM horario_detalle hd
+    LEFT JOIN secciones s ON s.id = hd.seccion_id
+    LEFT JOIN seccion_laboratorio sl ON sl.id = hd.seccion_lab_id
+    LEFT JOIN secciones s_lab ON s_lab.id = sl.seccion_id
+    LEFT JOIN cursos c ON c.id = COALESCE(s.curso_id, s_lab.curso_id)
+    LEFT JOIN carreras ca ON ca.id = c.carrera_id
+    LEFT JOIN salones sa ON sa.id = hd.salon_id
+    LEFT JOIN docentes d ON d.id = hd.docente_id
+    LEFT JOIN periodos p_ini ON p_ini.id = hd.periodo_inicio_id
+    LEFT JOIN periodos p_fin ON p_fin.id = hd.periodo_fin_id
+    LEFT JOIN dias_horario dh ON dh.id = hd.dia_horario_id
+    WHERE hd.horario_id = $1 AND hd.salon_id IS NOT NULL
+    ORDER BY p_ini.numero ASC
+  `,
+    [id]
+  );
+ 
+  const { rows: salones } = await db.query(
+    `SELECT id, nombre FROM salones WHERE activo = true ORDER BY nombre`
+  );
+  const { rows: periodos } = await db.query(
+    `SELECT numero, hora_inicio, hora_fin, es_manana FROM periodos ORDER BY numero`
+  );
+ 
+  const teoricos = detalles.filter((d) => !d.es_laboratorio);
+  const laboratorios = detalles.filter((d) => d.es_laboratorio);
+ 
+  const contenido = [
+    ...construirGridPdfMake(teoricos, salones, periodos, 'Horario de Clases - Cursos Teóricos', true),
+    ...construirGridPdfMake(laboratorios, salones, periodos, 'Horario de Clases - Laboratorios', false),
+  ];
+ 
+  // A1 landscape en puntos (72 dpi): 594mm x 841mm -> ~1683.78 x 2383.94 pt
+  const docDefinition = {
+    pageSize: { width: 2383.94, height: 1683.78 }, // A1 landscape
+    pageOrientation: 'landscape',
+    pageMargins: [20, 20, 20, 20],
+    defaultStyle: {
+      font: 'Roboto',
+      fontSize: 8,
+    },
+    styles: {
+      tituloSeccion: {
+        fontSize: 24,
+        bold: true,
+        alignment: 'center',
+        color: '#333333',
+        margin: [0, 0, 0, 20],
+      },
+      headerCell: {
+        fontSize: 10,
+        bold: true,
+        alignment: 'center',
+        color: '#111111',
+      },
+      timeCell: {
+        fontSize: 9,
+        bold: true,
+        alignment: 'center',
+        color: '#000000',
+      },
+    },
+    content: contenido,
+  };
+ 
+  const documento = pdfmake.createPdf(docDefinition);
+  return documento.getBuffer();
+}
  
 module.exports = {
   listar, obtener, getConflictos, getReporte,
-  exportarCSV, editarDetalle, activar, eliminar,
+  exportarCSV, editarDetalle, activar, eliminar, exportarPDF
 };
