@@ -17,6 +17,9 @@ router.get('/:id/reporte',        horariosController.reporte);
  
 // Exportar a CSV
 router.get('/:id/exportar/csv',   horariosController.exportarCSV);
+
+// Exportar a PDF
+router.get('/:id/exportar/pdf',   horariosController.descargarPDF);
  
 // Edición manual de un detalle del horario
 router.put('/:id/detalle/:detalleId', horariosController.editarDetalle);
