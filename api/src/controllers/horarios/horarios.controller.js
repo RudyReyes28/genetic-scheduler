@@ -49,6 +49,29 @@ async function exportarCSV(req, res) {
   }
 }
 
+const descargarPDF = async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    const pdfBuffer = await horariosService.exportarPDF(id);
+
+    // Cabeceras estrictas para PDF
+    res.set({
+      'Content-Type': 'application/pdf',
+      // 'inline' fuerza a que el navegador lo muestre en la pestaña en lugar de descargarlo ciegamente
+      'Content-Disposition': `inline; filename="horario_${id}.pdf"`, 
+    });
+
+    res.end(Buffer.from(pdfBuffer));
+    
+  } catch (error) {
+    console.error(" Error real generando PDF:", error); 
+    
+    // Si falla, enviamos texto plano. Así si se abre una pestaña, verás el error escrito y no el visor de PDF roto.
+    res.set('Content-Type', 'text/plain');
+    res.status(500).send(`Error generando PDF: ${error.message}`);
+  }
+};
+
 async function editarDetalle(req, res) {
   try {
     const resultado = await horariosService.editarDetalle(
@@ -89,4 +112,5 @@ module.exports = {
   editarDetalle,
   activar,
   eliminar,
+  descargarPDF
 };
